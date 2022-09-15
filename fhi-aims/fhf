@@ -1,0 +1,62 @@
+#!/bin/bash
+
+#******************************************************#
+#                                                      #
+#                         MF2                          #
+#           Script for extracting various              #
+#        information from molpro output files          #
+#                                                      #
+#        Benjamin Jackson, Auburn University           #
+#                 baj0040@auburn.edu                   #
+#                                                      #
+#                 Updated: 9/16/2019                   #
+#                                                      #
+#******************************************************#
+
+
+Main(){
+
+##Changeable Variables:
+	DIS_VAR=RT
+##
+if [[ $1 == *.out* ]]; then 
+	FNAME=$1; STYPE=$2; else FNAME=$2; STYPE=$1; 
+fi
+while getopts ":h" option; do
+	case $option in
+		h) Helpfn; exit;;
+		\?) Search_Fn; break;;
+	esac
+done
+if [[ "$#" -lt "1" ]]; then Helpfn; else Search_Fn; fi;
+}
+Search_Fn(){
+	DIS_FIX=$( echo ${DIS_VAR} | awk '{print toupper($1)}')
+case ${STYPE} in
+	te) grep 'Total energy[ ]*:' ${FNAME} | tail -1 | awk '{print $5}';;
+	te0) grep 'Total energy, T' ${FNAME} | tail -1 | awk '{print $8}';;
+	mag) printf "Total Magnetization: $(grep 'N_up-N_dn' ${FNAME} | tail -1 | awk '{print $6}' | sed 's/;//') 
+Absolute Magnetization: $(grep 'N_up-N_dn' ${FNAME} | tail -1 | awk '{print $9}') \n" ;;
+	*) echo "Error: Incorrect search specification"
+esac
+}
+
+Helpfn(){
+echo "
+MF2 script
+Used for pulling various data from molpro out files
+      Search Options:
+       m     |   Search for MCSCF Energies
+       d     |   Search for distances used in a scan, see below 
+
+Only one search may be performed at a time. The search type and file name may be placed in any order
+
+This help menu is viewable again by running this script without inputs or with the -h flag
+EXAMPLE:
+$(echo $0) File_name.out m
+or
+$(echo $0) m file_name.out 
+"
+}
+
+Main "$@"; exit

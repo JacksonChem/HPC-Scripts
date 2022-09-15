@@ -1,0 +1,3 @@
+#!/bin/bash
+
+grep 'IR Inten    --' $1 | tr " " "\n" | grep '.' | grep -v '\-\-' | grep -v 'I'

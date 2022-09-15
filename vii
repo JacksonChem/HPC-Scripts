@@ -1,0 +1,8 @@
+#!/bin/bash
+
+for i in $*; do
+LOGTOIN=$(echo "$i" | awk -F. '{print $1".inp"}')
+LIST=$(echo "${LIST} ${LOGTOIN}") 
+done
+
+vim ${LIST}

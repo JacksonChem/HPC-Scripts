@@ -1,0 +1,46 @@
+#!/bin/bash
+
+#******************************************************#
+#                                                      #
+#           Script for printing job history            #
+#     Intended to work with the SLURM queue system     #
+#                                                      #
+#        Benjamin Jackson, Auburn University           #
+#                 baj0040@auburn.edu                   #
+#                                                      #
+#                 Updated: 8/28/2022                   #
+#                                                      #
+#******************************************************#
+
+## Variables ##
+export SLURM_TIME_FORMAT="%a %b %d %H:%M" # Define time format for End
+SDATE=$(date -d '1 week ago' +%D-%R) # Search for all jobs within the last week
+HEADER_ONLY=$(date -d '10 years ago' +%D-%R)
+FORMAT="%.8i | %25j | %.9P | %.2t | %11M | %.3C%.3D %R"
+
+while getopts "c:" option; do
+	case $option in
+		n) SEARCH=nova;;
+		g) SEARCH=general;;
+	esac
+done
+if [[ $# -lt 1 ]] || [[ $1 -eq "i" ]]; then
+	echo "  JobID            JobName             Partition  Stat    Elapsed        CPUs/Nodes      "
+	echo "---------|---------------------------|-----------|----|-------------|--------------------"
+
+	if [[ $1 == "i" ]]; then
+		while true; do
+			squeue -h --format="${FORMAT}" -u $(whoami) | awk -F'|' '{printf "%8s|%25s|%5s|%3s|%11s|%s\n",$1,$2,$3,$4,$5,$6}' |sort -k 2
+			sleep 5
+			echo "---------------------------------------------------------------------------------------"
+		done
+	else
+		squeue -h --format="${FORMAT}" -u $(whoami) | awk -F'|' '{printf "%8s|%25s|%5s|%3s|%11s|%s\n",$1,$2,$3,$4,$5,$6}' |sort -k 2
+	fi
+else
+	LIST=$(squeue -h --format="${FORMAT}" -u $(whoami) | awk -F'|' '{printf "%8s|%25s|%5s|%3s|%11s|%s\n",$1,$2,$3,$4,$5,$6}' |sort -k 2)
+	echo ${SEARCH}
+	#echo ${LIST} | awk '{sum += $12;} END{print sum} '
+	#awk '{sum += $12;} END{print sum} ' <<< grep "${SEARCH}" <<< "${LIST}"
+fi
+

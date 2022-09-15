@@ -1,0 +1,36 @@
+################################################################################
+# Program Settings
+#
+# Listed are various settings to include; uncomment a line to include in your file 
+#   and add the chosen option under selection
+#
+################################################################################
+## Physical settings
+##  Keyword           Selection             Availabe Options
+#   xc                  pbe                   #  pbe, pbe0, hf, etc.
+#   spin                collinear             #  None; Collinear: (Spin-polarized)
+#   relativistic        atomic_zora scalar    #  ??
+#   mixer               pulay                 #  ??
+#   charge_mix_param    0.01                  #  ??
+
+## K-Point Grid
+#  k_grid  X X X        
+
+## Output Cube
+#  output cube spin_density
+#  cube_content_unit bohr
+
+## Output band structure (if included)
+
+
+################################################################################
+# Basis Settings
+#
+# Basis defaults are:
+#    light, light_sp, intermediate, tight, really_tight
+# Add a basis easily by using:
+#   :r /home/baj0040/pdft/fhitest/species_defaults/defaults_2020/[default]/[XX]_[Y]_default
+#   where XX is the atomic number and Y the atomic symbol 
+# 
+################################################################################
+

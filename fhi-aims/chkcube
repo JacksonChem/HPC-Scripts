@@ -1,0 +1,3 @@
+#!/bin/bash
+
+for i in *out; do j=$(echo $i | awk -F'.' '{print $1}'); ls /scratch/$(whoami)/fhia/$j/*cube; done

@@ -1,0 +1,84 @@
+#!/bin/bash
+
+FNAME=$(echo $1 | awk -F. '{print $1}')
+QUEUE=bigmem2
+MEM=350
+NPROC=48
+TIME=200:00:00
+SUBDIR=/home/$(whoami)/.subfiles
+CURDIR=$(pwd)
+QE_MODULE=espresso/intel/6.8
+SCRDIR=/scratch/$(whoami)/pdft/${FNAME}
+SCRIPT_PATH=$( dirname "$(readlink -f "$0")" )
+SPOT=EOF
+cat > ${SUBDIR}/${FNAME}.batch << EOF
+#!/bin/bash -l
+#SBATCH --job-name=${FNAME}.qe
+#SBATCH --ntasks=${NPROC}
+#SBATCH --nodes=1
+#SBATCH --mem=${MEM}GB
+#SBATCH --cpus-per-task=1
+#SBATCH --error=${SUBDIR}/${FNAME}.e%j
+#SBATCH --time=${TIME}
+#SBATCH --output=/dev/null
+#SBATCH --partition=${QUEUE}
+#SBATCH --mail-user=$(whoami)@auburn.edu
+#SBATCH --mail-type=NONE
+#SBATCH --no-requeue
+CURDIR=\$(pwd)
+FNAME=${FNAME}
+SCRDIR=${SCRDIR}
+SUBDIR=${SUBDIR}
+if  [[ ! -d \${SCRDIR} ]]; then       #Check if SUBDIR exists, create if not
+        mkdir -p \${SCRDIR}
+fi
+NPROC=${NPROC}
+module load ${QE_MODULE}
+cd \${SCRDIR}
+#Start scf Block
+EXT=scf
+sed -i s#calculation=.*#calculation=\'\${EXT}\',# \${CURDIR}/\${FNAME}.\${EXT}.in
+sed -i s#prefix=.*#prefix=\'\${FNAME}\',# \${CURDIR}/\${FNAME}.\${EXT}.in
+sed -i s#outdir=.*#outdir=\'\${SCRDIR}\',# \${CURDIR}/\${FNAME}.\${EXT}.in
+cp \${CURDIR}/\${FNAME}.\${EXT}.in \${SCRDIR}/\${FNAME}.\${EXT}.in
+if [[ -e \${CURDIR}/\${FNAME}.\${EXT}.out ]]; then mv \${CURDIR}/\${FNAME}.\${EXT}.out ${BACKUPDIR}; fi
+. ${SCRIPT_PATH}/qr_inoutgen "\${FNAME}" "\${EXT}" "\${CURDIR}"
+mpirun -n \${NPROC} /tools/espresso-6.8/bin/pw.x -inp \${SCRDIR}/\${FNAME}.\${EXT}.in >> \${CURDIR}/\${FNAME}.\${EXT}.out
+#End scf Block
+EXT=nscf
+sed -i s#calculation=.*#calculation=\'\${EXT}\',# \${CURDIR}/\${FNAME}.\${EXT}.in
+sed -i s#prefix=.*#prefix=\'\${FNAME}\',# \${CURDIR}/\${FNAME}.\${EXT}.in
+sed -i s#outdir=.*#outdir=\'\${SCRDIR}\',# \${CURDIR}/\${FNAME}.\${EXT}.in
+cp \${CURDIR}/\${FNAME}.\${EXT}.in \${SCRDIR}/\${FNAME}.\${EXT}.in
+if [[ -e \${CURDIR}/\${FNAME}.\${EXT}.out ]]; then mv \${CURDIR}/\${FNAME}.\${EXT}.out ${BACKUPDIR}; fi
+. ${SCRIPT_PATH}/qr_inoutgen "\${FNAME}" "\${EXT}" "\${CURDIR}"
+mpirun -n \${NPROC} /tools/espresso-6.8/bin/pw.x -inp \${SCRDIR}/\${FNAME}.\${EXT}.in >> \${CURDIR}/\${FNAME}.\${EXT}.out
+#End nscf Block
+EFermi=\$( grep 'the Fermi energy' \${CURDIR}/\${FNAME}.nscf.out | awk '{print \$5}')
+Emin=\$(echo \$( python -c "print( (\${EFermi}+"-0.25"}) )" ))
+Emax=\${EFermi}
+cat > \${SCRDIR}/\${FNAME}.ldos.in << ${SPOT}
+&inputpp
+ prefix='\${FNAME}',
+ outdir='\${SCRDIR}',
+ plot_num=10,
+ spin_component=0,
+ emin=\${Emin},
+ emax=\${Emax},
+/
+&plot
+ iflag=3,
+ output_format=6,
+ fileout='\${CURDIR}/\${FNAME}.ldos.cube',
+/
+${SPOT}
+cp \${SCRDIR}/\${FNAME}.ldos.in \${CURDIR}/\${FNAME}.ldos.out
+mpirun -n \${NPROC} /tools/espresso-6.8/bin/pp.x -inp \${SCRDIR}/\${FNAME}.ldos.in >> \${CURDIR}/\${FNAME}.ldos.out
+if [[ ! -s \${SUBDIR}/\${FNAME}.e\${SLURM_JOB_ID} ]]; then
+  rm -f \${SUBDIR}/\${FNAME}.e\${SLURM_JOB_ID}
+else
+  mv \${SUBDIR}/\${FNAME}.e\${SLURM_JOB_ID} \${CURDIR}/.
+fi
+exit 0
+EOF
+sbatch ${SUBDIR}/${FNAME}.batch

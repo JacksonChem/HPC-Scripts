@@ -1,0 +1,19 @@
+#!/bin/bash
+
+FNAME=$(echo $1 )
+START_OUT=$(( $(grep -n 'ATOMIC_POSITIONS (angstrom)' ${FNAME} | tail -1 | awk -F: '{print $1}') + 1 ))
+if [[ -n $(grep -i 'End final coordinates' ${FNAME}) ]]; then
+		END_OUT=$(( $(grep -n 'End final coordinate' ${FNAME} | tail -1 | awk -F: '{print $1}') - 1 ))
+	else
+		END_OUT=$(( $(grep -n 'Writing output data' ${FNAME} | tail -1 | awk -F: '{print $1}') - 6 ))
+fi
+sed -n ${START_OUT},${END_OUT}p ${FNAME} > temp.txt
+echo "ATOMIC_POSITIONS angstrom"
+cat temp.txt
+PARAM_START=$(( $(grep -n 'CELL_PARAMETERS (angstrom)' ${FNAME} | tail -1 | awk -F: '{print $1}') + 1 ))
+PARAM_END=$(( ${PARAM_START} + 2))
+sed -n ${PARAM_START},${PARAM_END}p ${FNAME} > temp.txt
+echo "CELL_PARAMETERS angstrom"
+cat temp.txt
+
+rm -f temp.txt

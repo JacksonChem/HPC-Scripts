@@ -1,0 +1,223 @@
+#!/bin/bash
+
+#******************************************************#
+#                                                      #
+#               Script for running CP2K                #
+#     Intended to work with the SLURM queue system     #
+#      within the Constance/Deception HPC systems      #
+#                                                      #
+#        Benjamin Jackson, Auburn University           #
+#                 baj0040@auburn.edu                   #
+#                                                      #
+#                Updated: 06/30/2022                   #
+#                                                      #
+#******************************************************#
+
+Main(){
+	FNAME=$(echo ${!#} | awk -F. '{print $1}')
+	##Defaults:
+	BILLING=ldpe
+	#BILLING=co2_ccpc
+	TIME=2-00:00:00
+	PARTITION=slurm
+	NODES=1
+	THREADS=1
+	EDIT_TIME=true #true will edit inp file to ensure WALLTIME in input agrees with the job submission, false null
+	EDIT_INPUT_PROJECT=true #true will edit the project name to always match the input name
+	                        #to work you must format your project name using "@set FNAME Project_Name"
+	##Default paths:
+	CURDIR=$(pwd)
+	ALT_ERROR_LOCATION=false
+	#BACKUPDIR=/home/$(whoami)/trash/overwrite
+
+	#Begin Program
+	SCRIPT_PATH=$( dirname "$(readlink -f "$0")" )
+	if [[ "$#" -lt 1 ]]; then Helpfn; exit; fi
+	Option_Handler "$@";
+	if [[ ! -e ${FNAME}.inp ]]; then echo "Input file was not found"; exit 30; fi
+	if [[ -z ${JOBNAME} ]]; then JOBNAME=${FNAME}; fi;
+	if [[ ${EDIT_INPUT_PROJECT} = true ]]; then Edit_Input_Project; fi
+	System_Check;
+	Time_Converter;
+	Partition_Handler;
+	Proc_Handler;
+	Batch_Builder;
+	if [[ ${STOP} = 1 ]]; then  exit; fi
+	sbatch ${CURDIR}/${FNAME}.batch
+	rm -f ${CURDIR}/${FNAME}.batch
+}
+Option_Handler(){
+	while getopts ":hn:m:t:q:a:j:p:r:g" option; do
+		case $option in
+			h) Helpfn; exit;;      #Call help function and exit
+			n) NODES=$OPTARG;;     #Number of Nodes
+			b) BILLING=$OPTARG;;   #Account to bill hours to
+			m) MEM=$( echo $OPTARG | sed 's/GB//' );; #Memory Request
+			t) TIME=$OPTARG;;      #HOUR:MINUTES
+			j) JOBNAME=$OPTARG;;   #Define a job name; default uses input file name
+			p) PART_OPT=$OPTARG;;  #Define the partition
+			r) THREADS=$OPTARG;;   #Define the number of threads
+			g) STOP=1;;		         #Create batch file then exit; do not start job
+		esac
+	done
+}
+Edit_Input_Project(){
+	PROJECT_VAR_STR=$(grep -oE '@set FNAME .+' ${FNAME}.inp)
+	PROJECT_STR=$(grep -oE "PROJECT .+" ${FNAME}.inp)
+	if [[ -n ${PROJECT_VAR_STR} ]]; then
+		sed -i "s/${PROJECT_VAR_STR}/@set FNAME ${FNAME}/" ${FNAME}.inp
+	elif [[ -n ${PROJECT_STR} ]]; then
+		sed -i "s/${PROJECT_STR}/PROJECT ${FNAME}/" ${FNAME}.inp
+	fi
+}
+Partition_Handler(){
+	case ${PART_OPT} in
+		7) PARTITION=slurm7;;
+		*) PARTITION=slurm;;
+	esac
+}
+Batch_Builder(){
+	Opening_Gen;
+	if [[ ${HOST_LABEL} == "CON" ]]; then
+		if [[ ${EDIT_TIME} = true ]]; then Edit_Inp_Time; fi;
+		if [[ ${PART_OPT} == 7 ]]; then
+			MODULE_LIST="gcc/8.1.0 intelmpi/2017.4.056 mkl gsl python/3.7.0"
+		else
+			MODULE_LIST="gcc/8.1.0 intelmpi/2017.4.056 mkl/14.0.2 gsl/2.1 python/3.4.2"
+		fi
+		Submit_Gen_Con_Bash;
+	elif [[ ${HOST_LABEL} ==  "DEC" ]]; then
+		if [[ ${EDIT_TIME} = true ]]; then Edit_Inp_Time; fi;
+		Submit_Gen_Dec;
+	fi
+	Closer_Gen;
+}
+System_Check(){
+	HOST=$(hostname)
+	case ${HOST} in
+		*constance*)   PROC_PER_NODE=24;HOST_LABEL=CON;;
+		*deception*)   PROC_PER_NODE=64;HOST_LABEL=DEC;;
+		*mitcluster4*) PROC_PER_NODE=;;
+		*mitcluster3*) PROC_PER_NODE=;;
+		*mitcluster2*) PROC_PER_NODE=;;
+	esac
+	NPROC=$(( ${NODES} * ${PROC_PER_NODE} ))
+	if [[ ${ALT_ERROR_LOCATION} = true ]]; then
+		SUBDIR=/people/$(whoami)/.subfiles
+		mkdir -p ${SUBDIR}
+	else
+		SUBDIR=${CURDIR}
+	fi
+}
+Proc_Handler(){
+#This is not complete; add functionality for multi-threading
+	if [[ ${THREADS} = 1 ]]; then
+		TASK_PER_NODE=${PROC_PER_NODE}
+	fi
+}
+Time_Converter(){
+ #Function for converting the time request to correct format/calculating total seconds, and job cut-off
+ #days-hours:minutes:seconds
+	if [[ ${TIME} =~ ^[[:digit:]]+$ ]]; then
+		DAY=${TIME}
+	elif [[ ${TIME} =~ ^([0-9]+)-([0-9]+):([0-9]+)(:)?([0-9]*)$ ]]; then
+		DAY=${BASH_REMATCH[1]}; HOUR=${BASH_REMATCH[2]}; MINUTE=${BASH_REMATCH[3]}; SECOND=${BASH_REMATCH[5]}
+	elif [[ ${TIME} =~ ^([0-9]+):([0-9]+)(:)?([0-9]*)$ ]]; then
+		HOUR=${BASH_REMATCH[1]}; MINUTE=${BASH_REMATCH[2]}; SECOND=${BASH_REMATCH[4]}
+	else
+		echo "There is an error with your time specification: ${TIME}"; exit
+	fi
+	if [[ -z ${DAY} ]]; then DAY=0; fi
+	if [[ -z ${HOUR} ]]; then HOUR=0; fi
+	if [[ -z ${MINUTE} ]]; then MINUTE=0; fi
+	if [[ -z ${SECOND} ]]; then SECOND=0; fi
+	TIME_FORMAT=$( echo ${DAY}-${HOUR}:${MINUTE}:${SECOND})
+	TIME_SEC=$(( ${DAY}*24*3600 + ${HOUR}*3600 + ${MINUTE}*60 + ${SECOND} ))
+	TIME_SEC_SHIFT=$(( ${DAY}*24*3600 + ${HOUR}*3600 + ${MINUTE}*60 + ${SECOND} - 300 ))
+}
+Edit_Inp_Time(){
+ #Adds a function to batch files to automatically edit the walltime in input file to allow a calculation to end before time-out
+	if [[ ${STOP} == 1 ]]; then
+		cat >> ${CURDIR}/${FNAME}.batch <<- EOF
+			TOT_TIME=\$(grep -i '#SBATCH --time=' ${SUBDIR}/\${FNAME}.batch | awk -F= '{print \$2}')
+			DAYS_SEC=\$( echo \${TOT_TIME} | awk -F- '{ print \$1 * 24 * 3600 }' )
+			HOUR_MIN_SEC=\$( echo \${TOT_TIME} | awk -F- '{print \$2}' | awk -F: '{print (\$1 * 3600) + (\$2 * 60) + \$3}')
+			TOT_SEC=\$(( \${DAYS_SEC} + \${HOUR_MIN_SEC} - 600 ))
+			sed -i "s/WALLTIME [-]*[[:digit:]]*/WALLTIME \${TOT_SEC}/" \${FNAME}.inp
+		EOF
+	else
+		cat >> ${CURDIR}/${FNAME}.batch <<- EOF
+			sed -i "s/WALLTIME [[:digit:]]*/WALLTIME ${TIME_SEC_SHIFT}/" \${FNAME}.inp
+		EOF
+	fi
+}
+Opening_Gen(){
+	cat > ${CURDIR}/${FNAME}.batch <<- EOF
+		#!/bin/bash
+		#SBATCH --partition=${PARTITION}
+		#SBATCH --account=${BILLING}
+		#SBATCH --time=${TIME_FORMAT}
+		#SBATCH --nodes=${NODES}
+		#SBATCH --ntasks-per-node=${TASK_PER_NODE}
+		#SBATCH --job-name=${JOBNAME}.cp2k
+		#SBATCH --cpus-per-task=${THREADS}
+		#SBATCH --error=${SUBDIR}/${FNAME}.err%j
+		#SBATCH --output=${SUBDIR}/${FNAME}.err%j
+		#SBATCH --exclusive
+		#SBATCH --output=/dev/null
+		##SBATCH --no-requeue
+		CURDIR=${CURDIR}
+		FNAME=${FNAME}
+
+	EOF
+}
+Submit_Gen_Dec(){
+	cat >> ${CURDIR}/${FNAME}.batch <<- EOF
+		export OMP_NUM_THREADS=1
+		source /etc/profile.d/modules.sh
+		module load gcc/10.3.0
+		module load openmpi/4.1.1-noucx
+		mpirun -np ${NPROC} --mca btl_openib_allow_ib 1 /people/tim/cp2k-8.2/exe//Linux-x86-64-gfortran-libint-libxc-noucx/cp2k.psmp -r -i \${CURDIR}/\${FNAME}.inp -o \${CURDIR}/\${FNAME}.out
+	EOF
+}
+Submit_Gen_New_Dec(){
+	cat >> ${CURDIR}/${FNAME}.batch <<- EOF
+		source /etc/profile.d/modules.sh
+		module load gcc/10.3.0 openmpi/4.1.3 binutils python/3.7.0
+		export OMP_NUM_THREADS=4
+		export OMP_PROC_BIND=close
+		export OMP_PLACES=cores
+		EXECUTABLE='/people/cjmundy/SOURCE_FORGE/cp2k-9.1-npt/exe/deception-gf-mkl-openmpi4.1.3-libint/cp2k.psmp'
+		srun --cpu_bind core \${EXECUTABLE} ${FNAME}.inp > ${FNAME}.out
+	EOF
+}
+Submit_Gen_Con_Bash(){
+	cat >> ${CURDIR}/${FNAME}.batch <<- EOF
+		module purge
+		module load ${MODULE_LIST}
+		export LIBINT_LIB=/qfs/projects/ops/rh6/cp2k/6.1/ext_libs/gcc/libint-1.1.5/install/lib
+		export LIBXC_LIB=/qfs/projects/ops/rh6/cp2k/6.1/ext_libs/gcc/libxc-4.0.4/install/lib
+		export LIBXSMM_LIB=/qfs/projects/ops/rh6/cp2k/6.1/ext_libs/gcc/libxsmm/lib
+		export ELPA_LIB=/qfs/projects/ops/rh6/cp2k/6.1/ext_libs/gcc/elpa-2016.05.003/install/lib
+		export PLUMED2_LIB=/people/leem142/CP2K/plumed2-master_3/src/lib/
+		export GSL_LIB=/qfs/projects/ops/rh6/gsl/2.1/lib
+		export LD_LIBRARY_PATH=\${LIBXSMM_LIB}:\${ELPA_LIB}:\${LIBXC_LIB}:\${LIBINT_LIB}:\${PLUMED2_LIB}:\${GSL_LIB}:\${LD_LIBRARY_PATH}
+		export CP2K_BIN=/qfs/people/leem142/CP2K/cp2k-6.1/exe/constance-gfortran-intelmpi-mkl-exx-plumed2
+
+		ulimit -s unlimited
+		mpirun -np ${NPROC} \${CP2K_BIN}/cp2k.popt -r -i \${CURDIR}/\${FNAME}.inp -o \${CURDIR}/\${FNAME}.out
+	EOF
+}
+Closer_Gen(){
+	cat >> ${CURDIR}/${FNAME}.batch <<- EOF
+		if [[ ! -s \${SUBDIR}/\${FNAME}.e\${SLURM_JOB_ID} ]]; then
+		rm -f \${SUBDIR}/\${FNAME}.e\${SLURM_JOB_ID}; fi
+		if [[ -s \${SUBDIR}/\${FNAME}.e\${SLURM_JOB_ID} ]] && [[ ${CURDIR} != ${SUBDIR} ]]; then
+		mv \${SUBDIR}/\${FNAME}.e\${SLURM_JOB_ID} \${CURDIR}/\${FNAME}.e\${SLURM_JOB_ID};fi
+		exit 0
+	EOF
+}
+Main "$@"; exit
+##
+## End of functioning parts of script
+##

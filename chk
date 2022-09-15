@@ -1,0 +1,74 @@
+#!/bin/bash
+
+#******************************************************#
+#                                                      #
+#            Script for manipulating .chk              #
+#     and generating .fchk files from Gaussian16       #
+#       Written for use on the Easley and ASC          #
+#                    HPC systems                       #
+#                                                      #
+#        Benjamin Jackson, Auburn University           #
+#                 baj0040@auburn.edu                   #
+#                                                      #
+#                 Updated: 9/23/2021                   #
+#                                                      #
+#******************************************************#
+
+
+#------------------------------------------------------------#
+#------             Usage and Arguments               -------#
+#------------------------------------------------------------#
+  if [ $# -lt 1 ]; then
+    echo "Location:" $0 "Usage:" "filename, flag (h:Output to Current Directory s:Output to Scratch c:Copy chk and fchk to Current Directory-hc for chk and fchk)"
+    exit 1
+  elif [ $# -lt 2 ]; then
+    echo "No Operation Specified"
+    exit 1
+  fi
+
+#------------------------------------------------------------#
+#------             Variables Arguments               -------#
+#------------------------------------------------------------#
+  fname=$1
+  basename=$(echo $fname | awk -F. '{print $1}')
+  chk=$(grep '%chk=' $fname | awk -F= '{print $2}')
+  chkname=$(echo $chk | awk -F. '{print $1}')
+  ext=$(echo $fname | awk -F. '{print $2}')
+  flag=$2
+  curdir=$(pwd)
+  user=$(whoami)
+  chkdir="/scratch/$user/$basename"      #Enable this for Hopper
+# chkdir=$(pwd)                           #Enable this for ASC 
+
+#------------------------------------------------------------#
+#------              Check for Chk file               -------#
+#------------------------------------------------------------#
+   if [ ! -f "$chkdir/$chk" ]; then
+     echo "The Specified Chk File Does Not Exist"
+     exit 1
+   fi
+
+#------------------------------------------------------------#
+#------                Run Formchk                    -------#
+#------------------------------------------------------------#
+   module load gaussian
+   if [ "$flag" == "h" ];    then
+     formchk -3 $chkdir/$chkname.chk $curdir/$basename.fchk    
+   elif [ "$flag" == "s" ];  then 
+     formchk -3 $chkdir/$chkname.chk $chkdir/$basename.fchk
+   elif [ "$flag" == "c" ];  then
+     cp $chkdir/$chkname.chk $curdir/$basename.chk
+   elif [ "$flag" == "hc" ]; then
+     formchk -3 $chkdir/$chkname.chk $curdir/$basename.fchk
+     cp $chkdir/$chkname.chk $curdir/$basename.chk
+   elif [ "$flag" == "ch" ]; then
+     formchk -3 $chkdir/$chkname.chk $curdir/$basename.fchk
+     cp $chkdir/$chkname.chk $curdir/$basename.chk
+   fi
+#echo fname is $fname
+#echo basename is $basename
+#echo chk is $chk
+#echo chkname is $chkname
+#echo chkdir is $chkdir
+#echo $chkdir/$chk
+#ls $chkdir

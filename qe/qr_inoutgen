@@ -1,0 +1,19 @@
+#!/bin/bash
+FNAME=$1
+EXT=$2
+CURDIR=$3
+END_BLOCK1=$(( $(grep -in 'ATOMIC_POSITIONS' ${CURDIR}/${FNAME}.${EXT}.in | awk -F: '{print $1}') - 1 ))
+KPOINTS_MARK=$(grep -in 'K_POINTS' ${CURDIR}/${FNAME}.${EXT}.in | awk -F: '{print $1}')
+if [[ -n $(grep -i 'CELL_PARAMETERS' ${CURDIR}/${FNAME}.${EXT}.in ) ]]; then
+	KPOINTS_END=$(( $(grep -in 'CELL_PARAMETERS' ${CURDIR}/${FNAME}.${EXT}.in | awk -F: '{print $1}') - 1 ))
+else
+	KPOINTS_END=$
+fi
+echo "======================================================
+Start Input
+" > ${CURDIR}/tmp
+sed -n "1,${END_BLOCK1}p" ${CURDIR}/${FNAME}.${EXT}.in >> ${CURDIR}/tmp
+sed -n "${KPOINTS_MARK},${KPOINTS_END}p" ${CURDIR}/${FNAME}.${EXT}.in >> ${CURDIR}/tmp
+echo "======================================================" >> ${CURDIR}/tmp
+cat ${CURDIR}/tmp > ${CURDIR}/${FNAME}.${EXT}.out
+rm -f ${CURDIR}/tmp

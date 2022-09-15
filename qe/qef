@@ -1,0 +1,10 @@
+#!/bin/bash
+
+SEARCH=$2
+FNAME=$1
+case $SEARCH in
+	[eE] ) grep '! *total energy' ${FNAME} | awk '{print $5}' ;;
+	[mM] ) grep 'Estimated total dynamical RAM' ${FNAME} | awk '{print $6}' ;;
+	[kK] ) grep 'k_points' ${FNAME} | sed 's/k_points //' ;;
+	[tT] ) grep ' *PWSCF *:' ${FNAME} | sed 's/[a-zA-Z: 0-9.]*CPU *//' | sed 's/WALL//' ;;
+esac

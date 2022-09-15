@@ -1,0 +1,13 @@
+#!/bin/bash
+
+FNAME=$(echo $1 | awk -F'.' '{print $1}')
+SCRDIR=/scratch/$(whoami)/fhia/${FNAME}
+WRKDIR=$(pwd)
+if [[ -n $(find ${SCRDIR} -maxdepth 1 -name "*cube") ]]; then
+	unset -v latest
+	for file in $(find ${SCRDIR} -maxdepth 1 -name "*cube"); do
+		[[ $file -nt $latest ]] &&  latest=$file
+	done
+	cp $latest ${WRKDIR}/${FNAME}.cube
+fi
+

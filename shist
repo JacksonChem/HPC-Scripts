@@ -1,0 +1,36 @@
+#!/bin/bash
+
+#******************************************************#
+#                                                      #
+#           Script for printing job history            #
+#     Intended to work with the SLURM queue system     #
+#                                                      #
+#        Benjamin Jackson, Auburn University           #
+#                 baj0040@auburn.edu                   #
+#                                                      #
+#                 Updated: 7/20/2022                   #
+#                                                      #
+#******************************************************#
+
+
+## Variables ##
+#export SLURM_TIME_FORMAT=relative # Define time format for End
+export SLURM_TIME_FORMAT="%a %b %d %H:%M" # Define time format for End
+SDATE=$(date -d '1 week ago' +%D-%R) # Search for all jobs within the last week
+HEADER_ONLY=$(date -d '10 years ago' +%D-%R)
+#FORMAT=JobID%12,JobName%-20,State%-10,Elapsed%-11,Start%-18,End%-18,AllocCPUS%-3,NNODES%4 # Establish  output format, use %XX to specify XX wide columns
+FORMAT=JobID%12,JobName%-20,State%-10,Start%-18,Elapsed%-11,End%-18,AllocCPUS%-3,NNODES%4 # Establish  output format, use %XX to specify XX wide columns
+#FORMAT=JobID%-10,JobName%-20,State%-10,Elapsed%-10,End%15,NodeList%15,AllocCPUS%3,NNODES%5 # Establish  output format, use %XX to specify XX wide columns
+
+echo "   JobID           JobName           State      Start Time       Elapsed         End Time      CPU NODES"
+echo "------------ -------------------- ---------- ------------------ ----------- ------------------ --- -----"
+if [[ $1 == f ]]; then  # Call as 'shist f' to get a full history that includes jobs which were cancelled or are currently running
+	sacct  -XnS ${SDATE} --format=${FORMAT} | sed '/[0-9]*\.ba/d' | sed '/[0-9]*\.0/d' | sed 's/inp[Gg]16/      /' | sort -k 5
+	elif [[ $1 == s ]]; then # Call as 'shist s' to get a short history that only lists completed jobs
+		sacct -XnS ${SDATE} --format=${FORMAT} | sed '/[0-9]*\.ba/d' | sed '/[0-9]*\.0/d' | sed 's/inp[Gg]16/      /' | sed '/RUN/d' | sed '/CANC/d' | sed '/PEND/d' | sort -k 5
+	elif [[ $1 == t ]]; then # Call as 'shist t' to get only jobs completed today
+		EDATE=$(date -d 'today' +%D-%R) # set end date to only today
+		sacct -nE ${EDATE} --format=${FORMAT} | sed '/[0-9]*\.ba/d' | sed '/[0-9]*\.[0-9]/d' | sed 's/inp[Gg]16/      /' | sed '/RUN/d' | sed '/CANC/d' | sed '/PEND/d' | sort -k 5
+	else # Default, displays jobid, jobname, state, start time, elapsed time, end time, #CPUs, and #Nodes for only completed and pending jobs
+		sacct -XnS ${SDATE} --format=${FORMAT} | sed '/[0-9]*\.ba/d' | sed '/[0-9]*\.[0-9]/d' | sed 's/inp[Gg]16/      /' | sed '/RUN/d' | sed '/CANC/d' | sort -k 5
+fi
