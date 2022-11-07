@@ -428,7 +428,9 @@ def BandPlot(file_baseName,bandDir,ylim_lower,ylim_upper,
 	matplotlib.rcParams['font.size'] = font_size
 	matplotlib.rcParams['lines.linewidth'] = default_line_width
 	#matplotlib.rcParams['lines.markersize'] = 1
-	plt.savefig(file_baseName+".png")
+	#plt.savefig(file_baseName+".png",transparent=True)
+	#plt.savefig(file_baseName+".png")
+	plt.savefig(file_baseName+".eps",format='eps',transparent=True)
 #==================================================#
 #def smoothdos(dos):
 #	dos = np.asarray(dos)

@@ -51,15 +51,16 @@ Main(){
 	rm -f ${SUBDIR}/${FNAME}.batch
 }
 Option_Handler(){
-	while getopts ":ghen:c:m:t:q:p:r:" option; do
+	while getopts ":ghen:c:m:t:q:p:rh:" option; do
 		case $option in
 			h) Helpfn; exit;;          #Call help function and exit
 			n) NODES_SET=$OPTARG;;     #Number of Nodes
 			c) NPROC_SET=$OPTARG;;     #Number of processors, not yet implemented fully
+			r) RESTART_OPT="true";;
 			m) MEM=$( echo $OPTARG | sed 's/GB//' );; #Memory Request
 			t) TIME=$OPTARG;;          #HOUR:MINUTES
 			q) QTYPE=$OPTARG;;         #Define the partition 
-			r) THREADS=$OPTARG;;       #Define the number of threads
+			h) THREADS=$OPTARG;;       #Define the number of threads
 			g) STOP_MARKER=1;;		     #Create batch file then exit; do not start job
 			e) EMAIL_MARKER=1;;        #Used to trigger email notifications
 		esac
@@ -107,8 +108,9 @@ Batch_Builder(){
 		MODULES_STR="${NOVA_MODULES}"; else MODULES_STR="${GENBIG_MODULES}"
 	fi
 	TAB="$(printf '\t')"
-	if [[ ${EMAIL_MARKER} = 1 ]]; then EMAIL_OPTION="#SBATCH --mail-type=END,FAIL,REQUEUE,TIME_LIMIT_90";
-	else	EMAIL_OPTION="#SBATCH --mail-type=NONE"; fi
+	if [[ ${EMAIL_MARKER} == 1 ]]; then EMAIL_OPTION="#SBATCH --mail-type=END,FAIL,REQUEUE,TIME_LIMIT_90";
+		else	EMAIL_OPTION="#SBATCH --mail-type=NONE"; fi
+	if [[ ${RESTART_OPT} -ne "true" ]]; then RESTART_OPTION="#SBATCH --no-requeue"; fi
 	Opening_Gen;
 	Edit_Inp_Time;
 	Submit_Gen;
@@ -171,10 +173,9 @@ Opening_Gen(){
 		#SBATCH --job-name=${JOBNAME}.cp2k
 		#SBATCH --error=${SUBDIR}/${FNAME}.err%j
 		#SBATCH --output=${SUBDIR}/${FNAME}.err%j
-		#SBATCH --exclusive
-		#SBATCH --no-requeue
 		#SBATCH --mail-user=$(whoami)@auburn.edu
 		${EMAIL_OPTION}
+		${RESTART_OPTION}
 		SUBDIR=${SUBDIR}
 		WRKDIR=${WRKDIR}
 		FNAME=${FNAME}
