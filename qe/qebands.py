@@ -8,12 +8,12 @@ import os.path
 
 def main():
     # Variable for the format of your gnu files, spin unpolarized, spin up, spin down-change as needed:
-    gnuformat = ['.bands.dat.gnu', '.bands1.dat.gnu', '.bands2.dat.gnu']
+    gnuformat = ['.bands.dat.gnu', '.spin1.dat.gnu', '.spin2.dat.gnu']
     # Format for the output file from band.x, spin unpolarized and spin up- change as needed:
-    bnd_out_form = ['.bands.out', 'bands1.out']
+    bnd_out_form = ['.bands.out', '.bands1.out']
     parser = argparse.ArgumentParser()
-    parser.add_argument('-emin', '-ymin', type=float, default=-10000000.)
-    parser.add_argument('-emax', '-ymax', type=float, default=-10000000.)
+    parser.add_argument('-emin', '-ymin', type=float, default=-2.)
+    parser.add_argument('-emax', '-ymax', type=float, default=2.)
     parser.add_argument('--scatter', action="store_true")
     parser.add_argument('--scattersize', '-s', type=float, default=2.)
     parser.add_argument('-fermi', type=float, default=-10000000.)
@@ -59,6 +59,8 @@ def main():
         for point in sym:
             if point != x[0] and point != x[-1]:
                 plt.axvline(point, color='k', linestyle=":")
+		else:
+			print("The band.x output file "+bnd_out+" was not found. High symmetry points will not be plotted")
     plt.savefig(filebase + '.eps', dpi=600, format='eps', transparent=True)
 
 

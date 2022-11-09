@@ -6,9 +6,11 @@ import shutil
 import sys
 import numpy as np
 import matplotlib
+matplotlib.use('PS')
 import matplotlib.pyplot as plt
 import argparse
 import glob
+matplotlib.pyplot.ioff()
 
 def Main() :
 	parser = argparse.ArgumentParser()
