@@ -59,8 +59,8 @@ def main():
         for point in sym:
             if point != x[0] and point != x[-1]:
                 plt.axvline(point, color='k', linestyle=":")
-		else:
-			print("The band.x output file "+bnd_out+" was not found. High symmetry points will not be plotted")
+    else:
+        print("The band.x output file "+bnd_out+" was not found. High symmetry points will not be plotted")
     plt.savefig(filebase + '.eps', dpi=600, format='eps', transparent=True)
 
 
