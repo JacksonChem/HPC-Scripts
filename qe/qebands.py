@@ -1,7 +1,10 @@
 #!/tools/python-3.9.2/bin/python
 
 import numpy as np
+import matplotlib
+matplotlib.use('PS')
 import matplotlib.pyplot as plt
+matplotlib.pyplot.ioff()
 import argparse
 import os.path
 
