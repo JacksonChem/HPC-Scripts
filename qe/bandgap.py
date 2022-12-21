@@ -1,16 +1,56 @@
 #!/tools/python-3.9.2/bin/python
+"""
+Script to calculate the direct and indirect band gaps calculated from either Quantum Espresso or FHI-Aims
 
-# ******************************************************#
-#                                                       #
-#           Script for calculating band gaps            #
-#           from Quantum Espresso .dat files            #
-#                                                       #
-#        Benjamin A Jackson,  Auburn University         #
-#                  baj0040@auburn.edu                   #
-#                                                       #
-#                 Updated:  12/01/2022                  #
-#                                                       #
-# ******************************************************#
+The direct band gap is calculated as the smallest energy difference at a single k-point between the valence and
+conduction band, while the indirect is calculated is the energy difference between the highest/lowest point for the
+valence/conduction band, respectively, over all k-points in the path.
+
+Band Gaps for Quantum Espresso:
+To calculate the band gap from QE output you must specify the '.dat' files output from a pp.x band calculation. If the
+calculation is spin unpolarized one file is needed and is specified following the '-u' or '--Unpol' flag. For spin
+polarized, two files are needed and are specified following the '-s' or '--SpinPol' flag.
+Examples:
+    bandgap.py -u filename.bands.dat
+    bandgap.py -s filename.spin1.dat filename.spin2.dat
+
+You MUST specify the fermi energy for this calculation. This can either be done explicitly with '-e' or '--EFermi'
+followed by the Ef in units of eV or this can be directly taken from the nscf output file which can be specified
+directly with '-f' or '--FileNscf'. Alternatively, the nscf filename can be obtained from the provided band files using
+the '--UseNscfFromBand' or '-n' flag which will take the filename.bands.dat file, remove all after the first '.' and add
+'.nscf.out' to give filename.nscf.out. If spin polarized, only the first '.dat' file is used for the nscf.
+Examples:
+    bandgap.py -e 2.5 -u filename.bands.dat
+    bandgap.py -f filename.nscf.out -s filename.spin1.dat filename.spin2.dat
+    bandgap.py -n -s filename.spin1.dat filename.spin2.dat
+
+
+Band Gaps for FHI-Aims:
+The band gap for FHI-Aims output may be found using the '-a' or '--fhi' flag followed by a filename e.g. 'filename.out'
+and will look for the matching files of 'filename.ctrl', 'filename.bands', and 'filename.geom'. The '.ctrl' and '.geom'
+files are equivalent to the FHI-aims default 'control.in' and 'geometry.in'. If they are not found in the current
+directory, the program will instead use 'control.in' and 'geometry.in' files if found. The 'filename.bands' file is a
+text file containing all bandYXXX.out for the calculation collated together (see bandorg.py for details). If present
+this file will be expanded into the individual 'bandYXXX.out' files in a directory 'filename_tmp/' which will be removed
+after completion. If 'filename.bands' does not exist, it will use all 'bandYXXX.out' files in the current directory for
+determining the band gap.
+Examples:
+    bandgap.py -a filename.out
+
+If the only files present are the 'control.in', 'geometry.in', and 'bandYXXX.out' files and 'filename.ctrl',
+'filename.bands', and 'filename.geom' do not exist then a 'filename' must still be specified after the '-a' or '--fhi'
+flag. However, the value of this 'filename' will be irrelevant and only 'control.in', 'geometry.in', and 'bandYXXX.out'
+files will be used.
+
+
+For both the QE and FHI-Aims you can give an energy threshold which will be used for searching in the region of Ef +/-
+threshold to determine the band gap. This can speed up the process of finding the band gap in very large files, but is
+not necessary otherwise.
+
+
+  Written by Benjamin A Jackson, Auburn University
+  baj0040@auburn.edu
+"""
 
 import os
 import numpy as np
@@ -42,10 +82,8 @@ def main():
         # Section for handling where eFermi is obtained
         if args.UseNscfFromBand:  # Use band file name to get nscf name, assume nscf ends in *.nscf.out
             if args.fileName is not None:  # If unpolarized is specified
-                # fermiFile = bandNameConverter(args.fileName)
                 fermiFile = (args.fileName).split(".")[0] + ".nscf.out"
             elif args.fileList is not None:  # If spin polarized is used
-                # fermiFile = bandNameConverter(args.fileList[0])
                 fermiFile = (args.fileList[0]).split(".")[0] + ".nscf.out"
             fileChecker(fermiFile)  # Check if NSCF file exists
             eFermi = qe_fermiFromNscf(fermiFile)  # Obtain Fermi Energy from NSCF file
@@ -98,6 +136,7 @@ def main():
 
 
 def fileChecker(fileName):  # Check if files exist
+    """Takes a value fileName and checks whether the file fileName is exists in the current directory"""
     try:
         if os.path.exists(os.path.join(os.getcwd(), fileName)) is False:
             raise FileNotFoundError
@@ -106,6 +145,7 @@ def fileChecker(fileName):  # Check if files exist
 
 
 def bandGapCalc(bandMat, thresh, isDirect):
+    """ Takes a matrix containing band energies and calculates either the direct or indirect band gap"""
     valenceMax = -999999
     conductMin = 999999
     bandGap = 999999
