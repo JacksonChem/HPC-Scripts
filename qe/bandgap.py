@@ -1,4 +1,5 @@
-#!/tools/python-3.9.2/bin/python
+#!/usr/bin/env python
+##!/tools/python-3.9.2/bin/python
 """
 Script to calculate the direct and indirect band gaps calculated from either Quantum Espresso or FHI-Aims
 

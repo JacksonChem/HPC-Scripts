@@ -1,4 +1,5 @@
-#!/tools/python-3.9.2/bin/python
+#!/usr/bin/env python
+##!/tools/python-3.9.2/bin/python
 """
 Script to plot or organize band structure and DOS files calculated with FHI-aims
 
