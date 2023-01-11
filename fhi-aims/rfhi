@@ -162,7 +162,7 @@ FHIAims_Gen(){
 		cp \${WRKDIR}/\${FNAME}.ctrl \${SCRDIR}/control.in
 		cd \${SCRDIR}
 		mpirun -n \${NPROC} aims.210226.scalapack.mpi.x > \${WRKDIR}/\${FNAME}.out
-		bandorg.py --IsJob --HomeDir \${WRKDIR} \${FNAME}
+		bandorg.py --IsJob --HomeDir \${WRKDIR} -f \${FNAME}
 		cd \${WRKDIR}
 		${SCRIPT_PATH}/fhicube ${FNAME}.out
 	EOF

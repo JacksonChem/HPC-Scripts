@@ -69,6 +69,7 @@ import matplotlib
 import numpy as np
 matplotlib.use('PS')
 import matplotlib.pyplot as plt
+from matplotlib import gridspec
 import argparse
 
 matplotlib.pyplot.ioff()
@@ -195,7 +196,7 @@ def FileChecker(fileName, checkIn_files):
 
 def BandPlot(file_list, bandDir, ylim_lower, ylim_upper,
              energy_offset, scatterOption, scatterSize, PLOT_SPECIES, PLOT_SPECIES_TOGETHER, dos_emin, dos_emax):
-    plot_ext = ".svg"  # file type extension used in the exported figure
+    plot_ext = ".eps"  # file type extension used in the exported figure
     print_resolution = 250  # The DPI used for printing out images
     default_line_width = 1  # Change the line width of plotted bands and k-vectors, 1 is default
     font_size = 12  # Change the font size.  12 is the default.
@@ -295,7 +296,10 @@ def BandPlot(file_list, bandDir, ylim_lower, ylim_upper,
                 ax_bands = axs[0]
                 species_dos = axs[1]
             else:
-                fig, axs = plt.subplots(1, len(species_list) + 1, sharey='row')
+                width_array = [1] * (len(species_list) + 1)
+                width_array[0] = 3
+                fig, axs = plt.subplots(1, len(species_list) + 1, sharey='row', gridspec_kw={'width_ratios': width_array
+                                                                                             })
                 ax_bands = axs[0]
         elif PLOT_DOS or PLOT_DOS_TETRAHEDRON:
             fig, axs = plt.subplots(1, 2, sharey='row')
@@ -330,6 +334,7 @@ def BandPlot(file_list, bandDir, ylim_lower, ylim_upper,
                     band_energies[-1] = [x - energy_offset for x in band_energies[-1]]
                 band_energies = np.asarray(band_energies)
                 for b in range(band_energies.shape[1]):
+                    #ax_bands.plot(xvals, band_energies[:, b], color=' br'[spin], linestyle=["","solid", "dashed"][spin])
                     ax_bands.plot(xvals, band_energies[:, b], color=' br'[spin])
         tickx = []
         tickl = []
@@ -441,7 +446,7 @@ def BandPlot(file_list, bandDir, ylim_lower, ylim_upper,
         plot_filename = "aimsplot" + plot_ext
     else:
         plot_filename = file_name_ctrl.split('.')[0] + plot_ext
-    plt.savefig(plot_filename)
+    plt.savefig(plot_filename, transparent=True)
 
 
 Main()
