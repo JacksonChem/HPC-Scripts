@@ -135,7 +135,8 @@ Mem_Handler(){
 		esac
 		#MEM_GIGS=$((${MEM_WORDS}*8/1000/1000/1000))
 		NPROC_NoHelper=$(( ${NPROC} - 1))
-		MEM=$( Round_Up "${MEM_WORDS}*8/1024/1024/1024*${NPROC_NoHelper}")
+		#MEM=$( Round_Up "${MEM_WORDS}*8/1024/1024/1024*${NPROC_NoHelper}")
+		MEM=$( Round_Up "${MEM_WORDS}*8/1024/1024/1024*${NPROC_NoHelper} / 3") #Fudge for molpro memory discrepency
 	else
 		echo "You did not specify a memory request in your input file"
 		exit 60
