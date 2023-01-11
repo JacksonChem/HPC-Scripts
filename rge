@@ -146,9 +146,9 @@ CPU_Handler(){
 		fi
 	fi
 	if [[ ${NPROC_CUSTOM} -ne 1 ]]; then
-		if [[ $(grep -ic '%NProcShared' ${FNAME}.inp) -eq 1 ]]; then 
-			NPROC=$(grep -i '%NProcShared' ${FNAME}.inp | awk -F'=' '{print $2}')
-		elif [[ $(grep -ic '%NProcShared' ${FNAME}.inp) -gt 1 ]]; then 
+		if [[ $(grep -ic -m 1 '^%NProcShared' ${FNAME}.inp) -eq 1 ]]; then 
+			NPROC=$(grep -i -m 1 '^%NProcShared' ${FNAME}.inp | awk -F'=' '{print $2}')
+		elif [[ $(grep -ic -m 1 '^%NProcShared' ${FNAME}.inp) -gt 1 ]]; then 
 			echo"Error in input: You have too many %NProcShared lines."
 		else
 			echo"Error in input: %NProcShared line not found."
@@ -169,8 +169,8 @@ Mem_Handler(){
       sed -i "3i %MEM=${MEM}" ${FNAME}.inp
     fi
 	else
-		if [[ -n $(grep -i '%mem' ${FNAME}.inp ) ]]; then
-			MEM=$(grep -i '%mem' ${FNAME}.inp | awk -F'=' '{print $2}')
+		if [[ -n $(grep -i -m 1 '%mem' ${FNAME}.inp ) ]]; then
+			MEM=$(grep -i -m 1 '%mem' ${FNAME}.inp | awk -F'=' '{print $2}')
 			MEM_UNIT=$(echo ${MEM} | sed -e 's/[[:digit:]]*//')
 			MEM_VAL=$(echo ${MEM} | sed -e "s/${MEM_UNIT}//")
 			case ${MEM_UNIT} in
