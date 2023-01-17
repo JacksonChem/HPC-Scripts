@@ -105,7 +105,7 @@ Molpro_Gen(){
 		module load ${GA_MODULE}
 		module load ${MPI_MODULE}
 		module load ${MOLPRO_MODULE}
-		cd \${SCRDIR}
+		#cd \${SCRDIR}
 		molpro -D \${SCRDIR} -d \${SCRDIR} --no-xml-output -t ${THREADS} -n \${NPROC} ${INT_STR} -W \${SCRDIR} -o \${WRKDIR}/${FNAME}.out \${WRKDIR}/${FNAME}.com
 	EOF
 }
@@ -115,8 +115,8 @@ Closer_Gen(){
 		else mv \${SUBDIR}/\${FNAME}.err\${SLURM_JOB_ID} \${WRKDIR}/.
 		fi
 		#Check for molden files
-		MOLDEN_FILE=\$(grep '^put,molden,' \${WRKDIR}/${FNAME}.com | awk -F, '{print \$3}' | awk -F'!' '{print \$1}' | awk -F'#' '{print \$1}') 
-		if [[ -n \${MOLDEN_FILE} ]] && [[ -e \${SCRDIR}/\${MOLDEN_FILE} ]]; then mv \${SCRDIR}/\${MOLDEN_FILE} \${WRKDIR}/\${MOLDEN_FILE}; fi
+		#MOLDEN_FILE=\$(grep '^[ ]*put,molden,' \${WRKDIR}/${FNAME}.com | awk -F, '{print \$3}' | awk -F'!' '{print \$1}' | awk -F'#' '{print \$1}') 
+		#if [[ -n \${MOLDEN_FILE} ]] && [[ -e \${SCRDIR}/\${MOLDEN_FILE} ]]; then mv \${SCRDIR}/\${MOLDEN_FILE} \${WRKDIR}/\${MOLDEN_FILE}; fi
 		exit 0
 	EOF
 }
