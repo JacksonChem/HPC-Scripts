@@ -1,4 +1,0 @@
-#!/bin/bash
-
-grep 'ies --' $1 | grep -v 'Low' | tr " " "\n" | grep '.' | grep -v '\-\-' | grep -v 'F'
-
