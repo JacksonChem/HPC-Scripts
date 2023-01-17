@@ -1,0 +1,48 @@
+#!/bin/bash -l
+Main(){
+	FNAME=$(echo ${!#} | awk -F. '{print $1}')
+
+	Option_Handler "$@";
+	if [[ ! -e ${FNAME}.inp ]]; then echo "Input file was not found"; exit 30; fi
+	Mem_Handler;
+	CPU_Handler;
+	Req_Check;
+  QUEUE=$(Queue_Set)
+	Maint_Check;
+	Batch_Builder;
+	if [[ ${STOP} = 1 ]]; then mv ${SUBDIR}/${FNAME}.batch ${WRKDIR}/; exit; fi
+	sbatch ${SUBDIR}/${FNAME}.batch
+	#rm -f ${SUBDIR}/${FNAME}.batch
+}
+Option_Handler(){
+	while getopts ":hN:n:m:t:q:go:" option; do
+		case $option in
+			h) Helpfn; exit;;  #Call help function and exit
+			n) NPROC=$OPTARG; NPROC_CUSTOM=1;; #Number of Processors
+			N) NODES=$OPTARG;; #Number of Nodes
+			m) MEM_JOB=$( echo $OPTARG | sed 's/GB//' ); MEM_CUSTOM=1;; #Memory Request
+			t) TIME=$OPTARG;;  #HOUR:MINUTES
+			q) QTYPE=$OPTARG;; #Type of Queue
+			g) STOP=1;;        #Create batch file then exit
+		esac
+	done
+}
+FILE_FIND(){
+	if [[ -z ${FRC_FILE} ]]; then FRC_FILE=${PROJ_NAME}-frc-1.xyz
+	if [[ -z ${POS_FILE} ]]; then POS_FILE=${PROJ_NAME}-pos-1.xyz
+	if [[ -z ${VEL_FILE} ]]; then VEL_FILE=${PROJ_NAME}-vel-1.xyz
+}
+XYZ_Check(){
+	if [[ -e ${POS_FILE} ]]; then	SECTION_LEN=$(( $(head -1 ${POS_FILE}) + 2 ));
+		elif [[ -e ${FRC_FILE} ]]; then SECTION_LEN=$(( $(head -1 ${FRC_FILE}) + 2 ));
+		elif [[ -e ${VEL_FILE} ]]; then SECTION_LEN=$(( $(head -1 ${VEL_FILE}) + 2 ));
+	fi
+}
+
+XYZ_CHECK2(){
+	FILE_LEN=$( wc -l $1 )
+	STEP=$(( $(head -1 ${1}) + 2 ))
+	DIV_CHECK=$( echo ${FILE_LEN} / ${STEP_LEN} | bc -l )
+}
+Main "$@"; exit
+

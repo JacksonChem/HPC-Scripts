@@ -1,0 +1,173 @@
+#!/bin/bash
+
+#******************************************************#
+#                                                      #
+#        Script for Stability/Opt Read G16 jobs        #
+#     Intended to work with the SLURM queue system     #
+#           within the Easley HPC system               #
+#                                                      #
+#        Benjamin Jackson, Auburn University           #
+#                 baj0040@auburn.edu                   #
+#                                                      #
+#                Updated:  2/16/2022                   #
+#                                                      #
+#******************************************************#
+
+# This is out-dated use at your own risk
+
+main(){
+#Default Variables- Change as you wish
+NPROC=6
+MEM_G16=12
+METHOD=CAM-B3LYP
+BASIS=gen
+TIME=500:00:00
+MEM_JOB=$(( $(echo ${MEM_G16} | sed 's/GB//') * 12 / 10 )) 
+
+#If no options are passed, just loop function over all of the inputs
+if [ "$#" -lt "1" ]; then
+	Submit_Many;
+elif [ "$#" -eq "1" ] && [ "$1" != "-h" ]; then
+	FILE=$1
+	Make_Batch
+	exit
+else
+#Set-up option handling
+  while getopts ":hm:n:s:t:M:b:" option; do
+    case $option in
+      h) Helpfn #Called help function and exit
+        exit;;
+      n) NPROC=$OPTARG;;
+      m) MEM_G16=$OPTARG;;
+      t) TIME=$OPTARG;; #HOUR:MINUTES
+      b) BASIS=$OPTARG;; 
+      M) METHOD=$OPTARG;; 
+      s) LOOP_FLAG=FALSE
+         FILE=$OPTARG;;
+      \?) echo "You have requested an invalid setting"
+        exit;;
+    esac
+  done
+fi
+MEM_JOB=$(( $(echo ${MEM_G16} | sed 's/GB//') * 12 / 10 )) 
+if [ ${LOOP_FLAG} == "FALSE" ]; then
+	if [ ! -e ${FILE} ]; then
+		echo "Input file was not found"
+		exit 0
+	fi
+	Make_Batch
+else
+	Submit_Many;
+fi
+}
+Submit_Many(){
+	while true; do
+		read -p "You have requested to run stabopt for all *inp in the current directory. Please confirm (y/n): " yn
+			case $yn in
+				[Yy]* )
+					for FILE in $(ls *inp); do
+					Make_Batch
+					done; exit;;
+				[Nn]* ) exit;;
+					*) echo "Please answer y or n";;
+			esac
+	done
+}
+
+
+Helpfn(){
+echo "
+Script for automatically running stable=opt and guess=read opt freq G16 Jobs
+      Options:             
+       -h    |   Help, display this current usage guide
+       -n    |   Number of Processors Requested
+       -m    |   Memory Requested for Gaussian in GB; specifying GB is optional
+       -t    |   Time Limit for Jobs in HR:MIN format
+       -b    |   Basis set to be used- type gen if individualizing specifying
+       -M    |   Method to be used, e.g. CAM-B3LYP or MP2
+       -s    |   Specify input file for a single calculation
+
+The output files will automatically be placed in the current directory and your original input files
+will not be altered in anyway
+
+If -s is not used, all files ending in .inp in the current directory will be submitted
+If -n, -m, -t, -b, and -m are not specified default values will be used.
+
+Your current defaults are:
+       Proc   =   ${NPROC}
+       Memory =   ${MEM_G16}
+       Method =   ${METHOD}
+       Basis  =   ${BASIS}
+       Time   =   ${TIME}
+You can change this in $(echo $0)
+
+EXAMPLE:
+$(echo $0) -n 12 -m 24 -t 10:00 -b cc-pVTZ -M MP2 -s file.inp
+"
+}
+
+Make_Batch(){
+FNAME=$(echo ${FILE} | awk -F. '{print $1}')
+SUBDIR=/home/$(whoami)/.subfiles
+WRKDIR=$(pwd)
+SCRDIR=/scratch/$(whoami)/${FNAME}
+if  [[ ! -d ${SCRDIR} ]]; then       #Check if SCRDIR exists, create if not
+	mkdir -p ${SCRDIR}
+fi
+if  [[ ! -d ${SUBDIR} ]]; then       #Check if SUBDIR exists, create if not
+	mkdir -p ${SUBDIR}
+fi
+
+## Modify input for autosubmission
+cat > ${SCRDIR}/${FNAME}.inp << EOF
+%chk=${FNAME}.chk
+%NProcShared=${NPROC}
+%Mem=${MEM_G16}GB
+#${METHOD}/${BASIS} stable=opt scf=(MaxCycle=100,QC)
+EOF
+sed '/^#/d;/^!#/d;/^%/d' ${WRKDIR}/${FNAME}.inp >> ${SCRDIR}/${FNAME}.inp
+
+cat > ${SUBDIR}/${FNAME}g16.batch << EOF
+#!/bin/bash -l
+#SBATCH --job-name=${FNAME}.g16
+#SBATCH --nodes=1
+#SBATCH --ntasks=${NPROC}
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=${MEM_JOB}GB
+#SBATCH --error=${SUBDIR}/${FNAME}.e%j
+#SBATCH --time=${TIME}
+#SBATCH --output=/dev/null
+#SBATCH --partition=general
+#SBATCH --mail-user=baj0040@auburn.edu
+#SBATCH --mail-type=NONE
+#SBATCH --no-requeue
+FNAME=${FNAME}
+WRKDIR=$(pwd)
+SCRDIR=${SCRDIR}
+SUBDIR=${SUBDIR}
+module load gaussian/16
+export g16root=\$(which g16 | sed -e "s/\/g16\/g16$//g")
+. \${g16root}/g16/bsd/g16.profile
+export GAUSS_SCRDIR=${SCRDIR}
+export GAUSS_CDEF=${NPROC}
+export GAUSS_MDF=${MEM_G16}GB
+#Stability Calculation
+cd \${SCRDIR}
+g16 \${SCRDIR}/${FNAME}.inp >! \${WRKDIR}/${FNAME}.stable.log
+#Optimization with stability guess
+sed -i 4c"#${METHOD}/${BASIS} guess=read freq opt !scf=(MaxCycle=100,QC)" \${SCRDIR}/${FNAME}.inp
+g16 \${SCRDIR}/${FNAME}.inp >! \${WRKDIR}/${FNAME}.opt.log
+if [[ ! -s \${SUBDIR}.e\${SLURM_JOB_ID} ]]; then
+		rm -f \${SUBDIR}.e\${SLURM_JOB_ID}
+	else
+  	mv \${SUBDIR}/${FNAME}g16.e\${SLURM_JOB_ID} \${WRKDIR}/.
+fi
+function cleansub { rm -f \${SUDIR}/${FNAME}.sh; }
+trap cleansub EXIT
+exit 0
+EOF
+sbatch ${SUBDIR}/${FNAME}g16.batch
+}
+
+main "$@"; exit
+

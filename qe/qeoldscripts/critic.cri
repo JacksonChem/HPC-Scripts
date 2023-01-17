@@ -1,0 +1,3 @@
+crystal liam4-3afmopt.scf.in
+newcell 1 1 1
+write newcell.scf.in

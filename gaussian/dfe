@@ -1,0 +1,28 @@
+#!/bin/bash
+
+flag=$1
+
+for file in $( ls *log)
+  do 
+    if [ "$flag" != "p" ]; then
+      echo "**************************"
+    fi
+    if [ "$flag" != "p" ] && [ `grep -c 'Error termination' $file` -ne 0 ]; then
+      echo $file | awk -F. '{print $1}'
+      echo "Failed"
+    elif [ `grep -c 'Normal term' $file` -eq 1 ] || [ `grep -c 'Normal term' $file` -eq 2 ]; then
+      echo $file | awk -F. '{print $1}'
+      grep ' SCF Done:  E' $file | tail -1 | awk '{print $3,"                   =  ",$5 }'
+      grep 'Zero-point correction' $file | awk '{print "ZPE Correction              =    ",$3}'
+      grep 'Thermal correction to Energy' $file | awk '{print "Thermal Correction dE       =   ",$5}'
+      grep 'Thermal correction to Enthalpy' $file | awk '{print "Thermal Correction dH       =   ",$5}'
+      grep 'Thermal correction to Gibbs' $file | awk '{print "Thermal Correction dG       =   ",$7}'
+      grep 'Sum of electronic and zero-point' $file | awk '{print "Electronic + ZPE Correction =   ",$7}'
+      grep 'Sum of electronic and thermal Energies' $file | awk '{print "Electronic + dE correction  =   ",$7}'
+      grep 'Sum of electronic and thermal Enthalpies' $file | awk '{print "Electronic + dH Correction  =   ",$7}'
+      grep 'Sum of electronic and thermal Free Energies' $file | awk '{print "Electronic + dG Correction  =   ",$8}'
+    fi
+    if [ "$flag" != "p" ]; then
+      echo "----------------------------------------------"  
+    fi
+  done

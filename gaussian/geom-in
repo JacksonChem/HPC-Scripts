@@ -1,0 +1,37 @@
+#!/bin/bash
+#******************************************************#
+#                                                      #
+#                Script for transfering                #
+#      the geometry from a gaussian 16 output file     #
+#             to a matching g16 input file             #
+#                                                      #
+#        Benjamin Jackson, Auburn University           #
+#                 baj0040@auburn.edu                   #
+#                                                      #
+#                Updated: 08/18/2022                   #
+#                                                      #
+#******************************************************#
+
+Main(){
+SAFETY=1 #Control for safe editing
+BACKUP_DIR=$HOME/backup/.geom-inbackup
+FILE=$1 
+FNAME=$( echo $1 | awk -F'.' '{print $1}' )
+
+if [[ $SAFETY = 1 ]]; then
+	if [[ ! -d ${BACKUP_DIR} ]]; then mkdir -p ${BACKUP_DIR}; fi
+	cp ${FNAME}.inp ${BACKUP_DIR}/
+fi
+GeomTransfer;
+}
+GeomTransfer(){
+#awk -e '/^[-]?[0-9]+ [0-9]+$/ {do_print=1} do_print==1 {print} NF==0 {do_print=0}' ${FNAME}.inp | sed 1d | sed /^$/d > temp
+~/bin/ggg ${FILE} > temp
+SEARCH=$(awk -e '/^[-]?[0-9]+ [0-9]+$/ {print}' ${FNAME}.inp )
+Start_Ln=$(( $( grep -n "^${SEARCH}$" ${FNAME}.inp | awk -F':' '{print $1}') + 1 )) 
+End_Ln=$(( ${Start_Ln} + $(wc -l temp | awk '{print $1}') - 1 ))
+sed -i ${Start_Ln},${End_Ln}d ${FNAME}.inp
+sed -i "/^${SEARCH}$/r temp" ${FNAME}.inp
+rm -f temp 
+}
+Main "$@"; exit

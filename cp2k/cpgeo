@@ -1,0 +1,186 @@
+#!/bin/bash
+
+#******************************************************#
+#                                                      #
+#          Script for listing iterations of            #
+#                   NEB CP2K runs                      #
+#                                                      #
+#        Benjamin Jackson, Auburn University           #
+#                 baj0040@auburn.edu                   #
+#                                                      #
+#               Updated:  09/14/2022                   #
+#                                                      #
+#******************************************************#
+
+main(){
+##Default Values which are customizable##
+CP2K_SUFFIX=out
+FILE_FORMAT=".*BAND.*\."${CP2K_SUFFIX}".*"
+
+RunStepSummary="false"
+if [[ $# -lt 1 ]]; then ${DEFAULT}; 
+	elif [[ $# -eq 1 ]] && [[ $1 != "-h" ]] && [[ $1 != "-s" ]] && [[ $1 != "-c" ]]; then LINES=$1; ${DEFAULT};
+	else
+		while getopts "hsS:" option; do
+			case $option in
+				h) HelpFn; exit;;
+				s) RunStepSummary="true";;
+				S) StepCount=$OPTARG;;
+			esac
+		done
+fi
+#for FILE in $(ls . | awk -e "/[:alnum::punct:]*BAND[[:alnum:]]*.${CP2K_SUFFIX}/ {print}"); do
+for FILE in $(find . -maxdepth 1 -regex ${FILE_FORMAT} | sed "s#\./##"); do
+	Complete_Check;
+	echo -e "${Blue}${FILE}${EndColor} ${Orange}-- ${STATUS}${EndColor}" 
+	if ${RunStepSummary}; then
+		Step_Summary;
+	else
+		Last_Step;
+	fi
+done
+}
+#Black        0;30     Dark Gray     1;30
+#Red          0;31     Light Red     1;31
+#Green        0;32     Light Green   1;32
+#Brown/Orange 0;33     Yellow        1;33
+#Blue         0;34     Light Blue    1;34
+#Purple       0;35     Light Purple  1;35
+#Cyan         0;36     Light Cyan    1;36
+#Light Gray   0;37     White         1;37
+BGrn='\033[1;32m';   Grn='\033[0;32m'
+BRed='\033[1;91m';   Red='\033[0;31m'
+Blue='\033[0;36m';   BBlue='\033[1;36m'; LBlue='\033[0;34m'
+Orange='\033[0;93m'; Yellow='\033[0;33m'
+LGrey='\033[0;37m'
+EndColor='\033[0m'
+#  Convergence check :
+#  Max. step size             =         0.0794892120
+#  Conv. limit for step size  =         0.0030000000
+#  Convergence in step size   =                   NO
+#  RMS step size              =         0.0143218683
+#  Conv. limit for RMS step   =         0.0015000000
+#  Convergence in RMS step    =                   NO
+#  Max. gradient              =         0.0015273526
+#  Conv. limit for gradients  =         0.0004500000
+#  Conv. for gradients        =                   NO
+#  RMS gradient               =         0.0002289641
+#  Conv. limit for RMS grad.  =         0.0003000000
+#  Conv. in RMS gradients     =                  YES
+
+MStep_Ln="Max. step size"
+MStepLim_Ln="Conv. limit for step size"
+RMSStep_Ln="RMS step size"
+RMSStepLim_Ln="Conv. limit for RMS step"
+MGrad_Ln="Max. gradient"
+MGradLim_Ln="Conv. limit for gradients"
+RMSGrad_Ln="RMS gradient"
+RMSGradLim_Ln="Conv. limit for RMS grad."
+Step_Summary(){
+	STEPS=10
+	LAST_STEP=$(grep -c "RMS DISPLACEMENT" ${FILE})
+	R_DIS=($(grep "RMS DISPLACEMENT" ${FILE} | tail -${STEPS} | sed s/\\[// | sed s/\\]// | awk '{print $4}'))
+	M_DIS=($(grep "MAX DISPLACEMENT" ${FILE} | tail -${STEPS} | sed s/\\[// | sed s/\\]// | awk '{print $4}'))
+	R_FRC=($(grep "RMS FORCE" ${FILE} | tail -${STEPS} | sed s/\\[// | sed s/\\]// | awk '{print $4}'))
+	M_FRC=($(grep "MAX FORCE" ${FILE} | tail -${STEPS} | sed s/\\[// | sed s/\\]// | awk '{print $4}'))
+	Ener=($(grep "ENERGY|" ${FILE} | tail -${STEPS} | awk '{print $NF}'))
+	#${R_DIS[@]} #get all values ${!R_DIS[@]} #get array indices #${#R_DIS[@]} #get array length
+	NumForm="%6s%12.8f%12.8f%12.8f%12.8f\n"
+	for PHRASE in "RMS DISPLACEMENT" "MAX DISPLACEMENT" "RMS FORCE" "MAX FORCE"; do
+		Thrsh+=($(grep "${PHRASE}" ${FILE} | tail -1 | sed s/\\[// | sed s/\\]// | awk '{print $5}'))
+	done
+	echo "Step, RMS Disp, Max Disp, RMS Force, Max Force, Total Energy" | awk -F',' \
+		'{printf "%6s%12s%12s%12s%12s  %-20s\n",$1,$2,$3,$4,$5,$6}'
+	for i in $(seq 0 $(( ${#R_DIS[@]} - 1)) ); do
+		line="$(( ${LAST_STEP} - $i + 1)) ${R_DIS[$i]} ${M_DIS[$i]} ${R_FRC[$i]} ${M_FRC[$i]} ${Ener[$i]}"
+		echo ${line} | awk -v StyleGD="${Grn}%12.8f" -v StyleBD="${Red}%12.8f" -v NC="${EndColor}" \
+		-v Thrsh1=${Thrsh[1]} -v Thrsh2=${Thrsh[2]} -v Thrsh3=${Thrsh[3]} -v Thrsh4=${Thrsh[4]} \
+		'{ printf "%6s",$1
+			if ($2 > Thrsh1) { printf StyleBD""NC,$2} else { printf StyleGD""NC,$2}
+			if ($3 > Thrsh2) { printf StyleBD""NC,$3} else { printf StyleGD""NC,$3}
+			if ($4 > Thrsh3) { printf StyleBD""NC,$4} else { printf StyleGD""NC,$4}
+			if ($5 > Thrsh4) { printf StyleBD""NC,$5} else { printf StyleGD""NC,$5}
+			printf "  %-20.16f",$6
+			print ""
+		}'
+	done
+	echo "Limit: "${Thrsh[*]} | awk -v Form="${LGrey}${NumForm}" -v NC="${EndColor}" '{printf Form,$1,$2,$3,$4,$5}' 
+}
+Complete_Check(){
+ for PHRASE in "RMS DISPLACEMENT" "MAX DISPLACEMENT" "RMS FORCE" "MAX FORCE"; do
+    if [[ $(grep "${PHRASE}" ${FILE} | tail -1 | awk '{print $6}') == "(yes)" ]]; then
+			count+=1
+		fi
+	done
+	if [[ ${count} == 4 ]]; then
+		STATUS="Optimization Complete"
+	else
+		STATUS="Running, last modified: "$(date +"%a %b %d %H:%M %Z" -r ${FILE})
+	fi
+}
+#  Convergence check :
+#  Max. step size             =         0.0794892120
+#  Conv. limit for step size  =         0.0030000000
+#  Convergence in step size   =                   NO
+#  RMS step size              =         0.0143218683
+#  Conv. limit for RMS step   =         0.0015000000
+#  Convergence in RMS step    =                   NO
+#  Max. gradient              =         0.0015273526
+#  Conv. limit for gradients  =         0.0004500000
+#  Conv. for gradients        =                   NO
+#  RMS gradient               =         0.0002289641
+#  Conv. limit for RMS grad.  =         0.0003000000
+#  Conv. in RMS gradients     =                  YES
+MStepLn="Max. step size"
+MStepLimLn="Conv. limit for step size"
+RMSStepLn="RMS step size"
+RMSStepLimLn="Conv. limit for RMS step"
+MGradLn="Max. gradient"
+MGradLimLn="Conv. limit for gradients"
+RMSGradLn="RMS gradient"
+RMSGradLimLn="Conv. limit for RMS grad."
+
+#  Max. step size             =         0.0794892120 #  RMS step size              =         0.0143218683 
+#  Conv. limit for step size  =         0.0030000000 #  Conv. limit for RMS step   =         0.0015000000
+#  Max. gradient              =         0.0015273526 #  RMS gradient               =         0.0002289641
+#  Conv. limit for gradients  =         0.0004500000 #  Conv. limit for RMS grad.  =         0.0003000000
+
+
+Last_Step(){
+	STYLE_GD=${Grn}"%12.6f"${EndColor}
+	STYLE_BAD=${Red}"%12.6f"${EndColor}
+	for PHRASE in ${MStepLn} ${MStepLimLn} ${RMSStepLn} ${RMSStepLimLn} ${MGradLn} ${MGradLimLn} ${RMSGradLn} ${RMSGradLimLn}; do
+		data+=(grep "${PHRASE}" ${FILE} | tail -1 | awk '{print $NF}')
+	echo ${data[*]} | awk -v StyleBad="${STYLE_BAD}"i -v StyleGD="${STYLE_GD}" '{ (for i=1; i < 9; i+=2)
+		{ 
+			if ( $4 < $5 )
+				{printf StyleGD,$1,$2,$3,$4,$5,$6}
+			else
+				{printf StyleBad,$1,$2,$3,$4,$5,$6,$7}
+		}'
+	done
+	echo "Energy = "$(grep "ENERGY|" ${FILE} | tail -1 | awk '{print $NF}') | awk '{printf "  %-17s%4s  %-20.16f\n",$1,$2,$3}'
+}
+
+HelpFn(){
+echo -e "
+Script for summarizing and printing output for CP2K NEB calculations. Prints in two forms, either a summary of the last step
+or a summary of the last \${STEPS} number of previous steps for all NEB output files in the current directory. 
+      Options:
+       -h    |   Help, display this current usage guide
+       -s    |   Summarize the last ${STEPS} steps
+       -S    |   Specify the number of steps summarized, use with -s. Usage: -S \${STEPS}
+
+If you do not specify -s only the last step will be reported. If -S is not reported the default will be used. 
+
+Your current defaults are:
+       STEPS            =   ${LINES}
+       File_Format      =   ${FILE_FORMAT} 
+You can change this in $(echo $0)
+
+EXAMPLES:
+$(echo $0) -s -S 15 
+"
+}
+main "$@"; exit
+
