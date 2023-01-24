@@ -37,7 +37,7 @@
   flag=$2
   curdir=$(pwd)
   user=$(whoami)
-  chkdir="/scratch/$user/$basename"      #Enable this for Hopper
+  chkdir="/scratch/$user/g16/$basename"      #Enable this for Hopper
 # chkdir=$(pwd)                           #Enable this for ASC 
 
 #------------------------------------------------------------#

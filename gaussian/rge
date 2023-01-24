@@ -40,7 +40,7 @@ Main(){
 	#SUBDIR=$(pwd)
 	SUBDIR=/scratch/$(whoami)/.subfiles
 	WRKDIR=$(pwd)
-	SCRDIR=/scratch/$(whoami)/${FNAME}
+	SCRDIR=/scratch/$(whoami)/g16/${FNAME}
 	BACKUPDIR=/home/$(whoami)/trash/overwrite
 	SCRIPT_PATH=$( dirname "$(readlink -f "$0")" )
 	#Begin Program

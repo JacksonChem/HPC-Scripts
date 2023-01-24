@@ -27,7 +27,7 @@ Main(){
   ##Default paths:
 	SUBDIR=/scratch/$(whoami)/.subfiles
 	WRKDIR=$(pwd)
-	SCRDIR=/scratch/$(whoami)/${FNAME}
+	SCRDIR=/scratch/$(whoami)/m21/${FNAME}
 	BACKUPDIR=/home/$(whoami)/trash/overwrite
 	SCRIPT_PATH=$( dirname "$(readlink -f "$0")" )
 	##Modules
