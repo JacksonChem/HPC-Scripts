@@ -13,34 +13,59 @@
 #******************************************************#
 
 ## Variables ##
+USERS="bajack" #Additional users you'd like to view, comma seperated
 export SLURM_TIME_FORMAT="%a %b %d %H:%M" # Define time format for End
 SDATE=$(date -d '1 week ago' +%D-%R) # Search for all jobs within the last week
 HEADER_ONLY=$(date -d '10 years ago' +%D-%R)
-FORMAT="%.8i | %25j | %.9P | %.2t | %11M | %.3C%.3D %R"
+FORMAT="%.8i | %25j | %.9P | %.2t | %11M | %.3C%.3D %R" #Default format
+FORMAT_U="%.8i | %.7u | %25j | %.9P | %.2t | %11M | %.3C%.3D %R" #Format for additional users
+Color='\033[2;30m' #Color for dependency jobs
+EndColor='\033[0m' #End color code marker
 
-while getopts "c:" option; do
-	case $option in
-		n) SEARCH=nova;;
-		g) SEARCH=general;;
-	esac
-done
-if [[ $# -lt 1 ]] || [[ $1 -eq "i" ]]; then
+Queue_print(){
+	for line in "${QUEUE_LIST[@]}"; do
+		if [[ "${line}" =~ .*(Dependency).* ]]; then 
+			echo -e "${Color}${line}${EndColor}" 
+		else
+			echo "${line}"
+		fi
+	done
+}
+
+#Print jobs for specified users- see ${USERS}
+if [[ $1 == "o" ]]; then
+	output=$(squeue -h --format="${FORMAT_U}" -u ${USERS} | awk -F'|' '{printf "%8s|%7s|%25s|%5s|%3s|%11s|%s\n",$1,$2,$3,$4,$5,$6,$7}' | sort -k 2)
+	readarray -t QUEUE_LIST < <(echo "${output}")
+	echo "  JobID     User            JobName           Partition   Stat   Elapsed        CPUs/Nodes      "
+	echo "---------|---------|---------------------------|-----------|----|-------------|--------------------"
+	Queue_print;
+#Print only the users jobs		
+else
+	output=$(squeue -h --format="${FORMAT}" -u $(whoami) | awk -F'|' '{printf "%8s|%25s|%5s|%3s|%11s|%s\n",$1,$2,$3,$4,$5,$6}' | sort -k 2)
+	readarray -t QUEUE_LIST < <(echo "${output}")
 	echo "  JobID            JobName             Partition  Stat    Elapsed        CPUs/Nodes      "
 	echo "---------|---------------------------|-----------|----|-------------|--------------------"
-
+	#Persistently loop over the queue
 	if [[ $1 == "i" ]]; then
 		while true; do
-			squeue -h --format="${FORMAT}" -u $(whoami) | awk -F'|' '{printf "%8s|%25s|%5s|%3s|%11s|%s\n",$1,$2,$3,$4,$5,$6}' |sort -k 2
+			Queue_print;
 			sleep 5
 			echo "---------------------------------------------------------------------------------------"
 		done
-	else
-		squeue -h --format="${FORMAT}" -u $(whoami) | awk -F'|' '{printf "%8s|%25s|%5s|%3s|%11s|%s\n",$1,$2,$3,$4,$5,$6}' |sort -k 2
+	#Search list and only print matching lines
+	elif [[ $1 == "s" ]]; then
+		for line in "${QUEUE_LIST[@]}"; do
+			if [[ "${line}" =~ .*"${2}".* ]]; then
+				if [[ "${line}" =~ .*(Dependency).* ]]; then 
+					echo -e "${Color}${line}${EndColor}" 
+				else
+					echo "${line}"
+				fi
+			fi
+		done
+	#Default output
+	else	
+		Queue_print;
 	fi
-else
-	LIST=$(squeue -h --format="${FORMAT}" -u $(whoami) | awk -F'|' '{printf "%8s|%25s|%5s|%3s|%11s|%s\n",$1,$2,$3,$4,$5,$6}' |sort -k 2)
-	echo ${SEARCH}
-	#echo ${LIST} | awk '{sum += $12;} END{print sum} '
-	#awk '{sum += $12;} END{print sum} ' <<< grep "${SEARCH}" <<< "${LIST}"
 fi
 
