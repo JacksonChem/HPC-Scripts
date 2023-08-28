@@ -1,5 +1,22 @@
 #!/bin/bash
 
+#------------------------------------------------------------
+#                                                      
+#   Script for generating a series of sequentially dependent 
+#     jobs from a specified sbatch file for use with SLURM 
+#
+#   For usage details call the script with the -j option      
+#                                                      
+#   Created by: Benjamin Jackson, PNNL           
+#               benjamin.jackson@pnnl.gov                   
+#               ba_jackson@outlook.com
+#
+#   Github:     JacksonChem
+#
+#   Updated:    08/28/2023                   
+#                                                      
+#------------------------------------------------------------
+
 Main(){
 	NUM_REPEAT=5 #Number of dependent job submissions
 	SPLIT_OUTPUTS=false #Enable seperate outputs for each job
