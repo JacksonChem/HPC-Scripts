@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -J 1fs-2h-4all
-#SBATCH -A m4015
+#SBATCH -A m401
 #SBATCH --qos regular
 #SBATCH --constraint cpu
 #SBATCH --output=%j.slurm
@@ -8,12 +8,13 @@
 #SBATCH --nodes 2
 #SBATCH --ntasks-per-node 128
 #SBATCH --cpus-per-task 2
+
 CP2K20221=/global/homes/c/cjmundy/SOURCEFORGE_CP2K/cp2kv2022.1/exe/perlmutter-cpu/cp2k.popt
 FNAME=pd192-28h-139w-6hcl-0e
 
 WFN2=$(ls *wfn.bak-2 2>/dev/null); WFN=$(echo ${WFN2} | sed 's/\.bak-2//')
 RSART1=$(ls *-1.restart.bak-1 2>/dev/null); RSTART=$(echo ${RSTART1} | sed 's/\.bak-1//')
-if [[ -f ${WFN2} ]] && [[ -f ${WFN} ]]; then
+if [[ -f ${WFN2} && -f ${WFN} ]]; then
 	WFNSIZE2=$(ls -l ${WFN2} | awk '{print $5}')
 	WFNSIZE=$(ls -l ${WFN} | awk '{print $5}')
 	RSIZE1=$(ls -l ${RSTART1} | awk '{print $5}')
