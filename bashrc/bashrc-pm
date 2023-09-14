@@ -1,0 +1,96 @@
+# .bashrc
+
+# Source global definitions
+#if [ -f /etc/bashrc ]; then
+#	. /etc/bashrc
+#fi
+# don't put duplicate lines or lines starting with space in the history.
+HISTCONTROL=ignoreboth
+#export CRITIC_HOME=/people/jack536/critic2
+PATH=$PATH:~/bin:~/scripts/fhi-aims:~/scripts/qe:~/scripts:~/scripts/cp2k:~/scripts/gaussian:~/scripts/molpro:~/scripts/slurm-sub/
+
+#Constance specific settings
+if [[ $(hostname) =~ ^constance.* ]]; then
+	module load python/3.7.2
+fi
+#Deception specific settings
+if [[ $(hostname) =~ ^deception.* ]]; then
+	module load python/3.7.0
+fi
+if [[ $(hostname) =~ .*login.* ]]; then
+	module load python
+fi
+
+# PNNL SSH Commands
+alias con='ssh jack536@constance.pnl.gov'
+alias dec='ssh jack536@deception.pnl.gov'
+alias mit4='ssh jack536@mitcluster4.pnl.gov'
+
+# Folder shortcuts
+alias scr='cd /global/cfs/cdirs/m4015/baj'
+
+# Vim Commands
+alias vi='vim'
+
+# Slurm Commands
+alias qs='squenow'
+alias sq='squeue --format="%.18i %.9P %.25j %.8u %.2t %.10M %.6D %.3C %R"'
+alias slow='squeue --format="%.18i %.9P %.20j %.8u %.2t %.10M %.6D %R" -u bajack -i 2'
+alias jc='scancel'
+alias idle='sinfo -t idle'
+alias scomp='sreport cluster AccountUtilizationByUser start=01.01.21'
+alias sjob='scontrol show jobid -dd'
+alias sdets='sinfo -o"%15P %5a %15l %5D %8t %5c"'
+
+# Command Shortcuts
+alias cp='cp -v'
+alias tf='tail -100f'
+alias pren1='pren 1'
+alias m21='m21a'
+
+# Delete Commands
+alias rm='rm -i'
+alias rmf='rm -f'
+alias rme='find . -name "*.e[0-9][0-9][0-9][0-9]*" -delete && find . -name "*.err[0-9][0-9][0-9][0-9]*" -delete && \
+           find . -name "*.out_[0-9][0-9][0-9]" -delete; rmf CRASH'
+alias rmo='rm -f *.o[0-9][0-9][0-9][0-9][0-9][0-9][0-9] *.e[0-9][0-9][0-9][0-9][0-9][0-9]*'
+alias rmsc='rm -f *TMP* fort*'
+
+# Return commands
+alias mk='curdir=`pwd`'
+alias bk='cd $curdir'
+alias mk1='curdir1=`pwd`'
+alias bk1='cd $curdir1'
+alias mk2='curdir2=`pwd`'
+alias bk2='cd $curdir2'
+
+## Color definitions
+#Colors for FHI-aims
+LS_COLORS=$LS_COLORS:'*.geom=91:*.ctrl=93:*.bands=94:*.cube=96:*.in=91:ex=33;01:';
+#Colors for Gaussian and Molpro
+LS_COLORS=$LS_COLORS:'*.chk=38;5;90:*.log=38;5;64:*.inp=38;5;202:*.com=38;5;214:*.out=32:*_backup=05;34;43:*.wfc=1;33:';
+#Colors for CP2K
+LS_COLORS=$LS_COLORS:'*.wfn=90:*.wfn.bak-1=90:*.wfn.bak-2=90:*.wfn.bak-3=90:*.wfn.bak-4=90:*-1.restart=38;5;214:*xyz=36:*.cell=95:*.ener=95:';
+#Miscellaneous
+LS_COLORS=$LS_COLORS:'*.eps=38;5;13:*.test=38;5;214:';
+#Programming
+LS_COLORS=$LS_COLORS:'*.f90=33:*.x=33:';
+export LS_COLORS
+
+# Settings for prompt
+export PS1="\[\e[38;5;243m\][\u\[$(tput sgr0)\]\[\e[38;5;249m\]@\[$(tput sgr0)\]\[\e[38;5;250m\]\H\[$(tput sgr0)\]\[\e[38;5;243m\]]\[$(tput sgr0)\]\[\e[38;5;40m\](\[$(tput sgr0)\]\[\e[38;5;34m\]\A\[$(tput sgr0)\]\[\e[38;5;40m\])\[$(tput sgr0)\]\[\e[38;5;214m\][\W]:\[$(tput sgr0)\]"
+
+# ls commands
+alias ls='ls --color=auto --sort=extension --group-directories-first'
+alias l.='ls -d .* --color=auto'
+alias la='ls -a'
+alias ll='ls -lha'
+alias lsr='ls -I "*restart"'
+
+# Usage Search
+alias dus='du -hS | sort -hr'
+
+#ifort -o name.x name.f90
+#Vim configure command
+#./configure --with-features=huge --enable-multibyte --enable-rubyinterp=yes --enable-pythoninterp=yes --enable-python3interp=yes --enable-perlinterp=yes --enable-luainterp=yes --enable-cscope --prefix=/people/jack536/
+#salloc --nodes 1 -C haswell -q interactive -t 04:00:00 -A m2979
