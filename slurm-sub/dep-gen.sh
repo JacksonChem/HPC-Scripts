@@ -31,7 +31,7 @@ Main(){
 			if [[ ${SUB_CNT} -eq 1 ]]; then
 				JOB_SUB=$(sbatch --depend=${JOB_TO_FOLLOW} ${BATCH}) 
 			else
-				JOB_NUM=$(echo ${JOB_SUB} | awk '{printf "%8d", $4}')
+				JOB_NUM=$(echo ${JOB_SUB} | awk '{print $4}')
 				JOB_SUB=$(sbatch --depend=${JOB_NUM} ${BATCH})
 			fi
 		done
@@ -63,7 +63,7 @@ One_Output(){
 		if [[ ${SUB_CNT} -eq 1 ]]; then
 			Initial_Job;
 		else
-			JOB_NUM=$(echo ${JOB_SUB} | awk '{printf "%8d", $4}')
+			JOB_NUM=$(echo ${JOB_SUB} | awk '{print $4}')
 			JOB_SUB=$(sbatch --depend=${JOB_NUM} ${BATCH})
 		fi
 	done
@@ -76,7 +76,7 @@ Many_Outputs(){
 		if [[ ${i} -eq ${SPLIT_CNT} ]]; then
 			Initial_Job;
 		else
-			JOB_NUM=$(echo ${JOB_SUB} | awk '{printf "%8d", $4}')
+			JOB_NUM=$(echo ${JOB_SUB} | awk '{print $4}')
 			JOB_SUB=$(sbatch --depend=${JOB_NUM} ${BATCH})
 		fi
 	done
