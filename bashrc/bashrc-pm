@@ -6,7 +6,6 @@
 #fi
 # don't put duplicate lines or lines starting with space in the history.
 HISTCONTROL=ignoreboth
-#export CRITIC_HOME=/people/jack536/critic2
 PATH=$PATH:~/bin:~/scripts/fhi-aims:~/scripts/qe:~/scripts:~/scripts/cp2k:~/scripts/gaussian:~/scripts/molpro:~/scripts/slurm-sub/
 
 #Constance specific settings
@@ -21,13 +20,6 @@ if [[ $(hostname) =~ .*login.* ]]; then
 	module load python
 fi
 
-# PNNL SSH Commands
-alias con='ssh jack536@constance.pnl.gov'
-alias dec='ssh jack536@deception.pnl.gov'
-alias mit4='ssh jack536@mitcluster4.pnl.gov'
-
-# Folder shortcuts
-alias scr='cd /global/cfs/cdirs/m4015/baj'
 
 # Vim Commands
 alias vi='vim'
@@ -35,7 +27,7 @@ alias vi='vim'
 # Slurm Commands
 alias qs='squenow'
 alias sq='squeue --format="%.18i %.9P %.25j %.8u %.2t %.10M %.6D %.3C %R"'
-alias slow='squeue --format="%.18i %.9P %.20j %.8u %.2t %.10M %.6D %R" -u bajack -i 2'
+alias slow='squeue --format="%.18i %.9P %.20j %.8u %.2t %.10M %.6D %R" -u $(whoami) -i 2'
 alias jc='scancel'
 alias idle='sinfo -t idle'
 alias scomp='sreport cluster AccountUtilizationByUser start=01.01.21'
