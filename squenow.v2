@@ -1,0 +1,91 @@
+#!/bin/bash
+
+#------------------------------------------------------------
+#                                                      
+#   Script for printing information for jobs running   
+#      on a SLURM Queue 
+#                                                      
+#   Created by: Benjamin Jackson, PNNL           
+#               benjamin.jackson@pnnl.gov                   
+#               ba_jackson@outlook.com
+#
+#   Github:     JacksonChem
+#
+#   Updated:    09/19/2023                   
+#                                                      
+#------------------------------------------------------------
+
+Main(){
+	## Variables ##
+	USERS="" #Additional users you'd like to view, comma seperated
+	export SLURM_TIME_FORMAT="%a %b %d %H:%M" # Define time format for End
+	SDATE=$(date -d '1 week ago' +%D-%R) # Search for all jobs within the last week
+	HEADER_ONLY=$(date -d '10 years ago' +%D-%R)
+	FORMAT="%.8i | %25j | %.9P | %.2t | %11M | %.3C%.3D %R" #Default format
+	FORMAT_U="%.8i | %.3u | %25j | %.9P | %.2t | %11M | %.3C%.3D %R" #Format for additional users
+	Color='\033[2;30m' #Color for dependency jobs
+	EndColor='\033[0m' #End color code marker
+
+	Option_Handler "$@";
+
+	if [[ -n ${USERS} ]]; then #Enable print for multiple users
+		USERS=${USERS},$(whoami)
+		echo "  JobID    User           JobName           Partition   Stat   Elapsed        CPUs/Nodes      "
+		echo "---------|-----|---------------------------|-----------|----|-------------|--------------------"
+		output=$(squeue -h --format="${FORMAT_U}" -u ${USERS} | awk -F'|' '{printf "%8s|%4s|%25s|%5s|%3s|%11s|%s\n",$1,$2,$3,$4,$5,$6,$7}' | sort -k 2)
+	else #Default print format for single user
+		echo "  JobID            JobName             Partition  Stat    Elapsed        CPUs/Nodes      "
+		echo "---------|---------------------------|-----------|----|-------------|--------------------"
+		output=$(squeue -h --format="${FORMAT}" -u $(whoami) | awk -F'|' '{printf "%8s|%25s|%5s|%3s|%11s|%s\n",$1,$2,$3,$4,$5,$6}' | sort -k 2)
+	fi
+
+	readarray -t QUEUE_LIST < <(echo "${output}")
+
+	if [[ ${REPEAT} ]]; then #Persistently loop over the queue
+		while true; do
+				Queue_Print;
+				sleep 5
+				echo "---------------------------------------------------------------------------------------"
+			done
+	else #Print once
+		Queue_Print;
+	fi
+}
+
+Option_Handler(){
+  while getopts ":hs:du:" option; do
+    case $option in
+      h) Helpfn; exit;;  #
+      s) SEARCH_STRING=$OPTARG DO_SEARCH=true;;  #Enable the search functionality to display only matching jobs
+      d) REMOVE_DEPEND=true;; #Do not print any dependent jobs; to be added- List a count of dependent jobs
+			u) USERS=${USERS},${OPTARG};; #Add additional users to list jobs for
+			i) REPEAT=true;;
+      esac
+  done
+}
+Depend_Print(){
+	if [[ "$1" =~ .*(Dependency).* ]]; then
+		if [[ ${REMOVE_DEPEND} ]]; then
+			:
+		else
+			echo -e "${Color}${1}${EndColor}"
+		fi
+	else
+		echo "$1"
+	fi
+}
+Queue_Print(){
+	for line in "${QUEUE_LIST[@]}"; do
+		if [[ ${DO_SEARCH} ]]; then
+			if [[ "${line}" =~ .*"${SEARCH_STRING}".* ]]; then
+				Depend_Print "${line}";
+			else
+				:
+			fi
+		else
+			Depend_Print "${line}";
+		fi
+	done
+}
+ 
+Main "$@"; exit;
