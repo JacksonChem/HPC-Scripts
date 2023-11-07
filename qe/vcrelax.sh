@@ -77,7 +77,7 @@ sed -i s#prefix=.*#prefix=\'\${FNAME}\',# \${CURDIR}/\${FNAME}.scf.in
 sed -i s#outdir=.*#outdir=\'\${SCRDIR}\',# \${CURDIR}/\${FNAME}.scf.in
 
 cp \${CURDIR}/\${FNAME}.scf.in \${SCRDIR}/\${FNAME}.scf.in
-mpirun -n \${NPROC} /tools/espresso-6.8/bin/pw.x -inp \${SCRDIR}/\${FNAME}.scf.in > \${CURDIR}/\${FNAME}.scf.out
+mpirun -n \${NPROC} /tools/espresso-6.8/bin/pw.x -inp \${SCRDIR}/\${FNAME}.scf.in >> \${CURDIR}/\${FNAME}.scf.out
 while true; do
 	if [[ -n \$(grep 'The maximum number of steps has been reached' \${CURDIR}/\${FNAME}.scf.out) ]]; then
 		cat \${CURDIR}/\${FNAME}.scf.out >> \${CURDIR}/\${FNAME}.scf.out_past
@@ -98,7 +98,7 @@ while true; do
 		sed -i \$(( \${PARAM_IN} + 1 )),\$(( \${PARAM_IN} + 3 ))d \${SCRDIR}/\${FNAME}.scf.in
 		sed -i "/CELL_PARAMETERS angstrom/r \${SCRDIR}/\${TEMP_txt2}" \${SCRDIR}/\${FNAME}.scf.in
 		rm -f \${SCRDIR}/\${TEMP_txt} \${SCRDIR}/\${TEMP_txt2}
-		mpirun -n \${NPROC} /tools/espresso-6.8/bin/pw.x -inp \${SCRDIR}/\${FNAME}.scf.in > \${CURDIR}/\${FNAME}.scf.out
+		mpirun -n \${NPROC} /tools/espresso-6.8/bin/pw.x -inp \${SCRDIR}/\${FNAME}.scf.in >> \${CURDIR}/\${FNAME}.scf.out
 	else
 		break
 	fi
