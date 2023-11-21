@@ -5,7 +5,7 @@
 #   Script for generating a series of sequentially dependent 
 #     jobs from a specified sbatch file for use with SLURM 
 #
-#   For usage details call the script with the -j option      
+#   For usage details call the script with the -h option      
 #                                                      
 #   Created by: Benjamin Jackson, PNNL           
 #               benjamin.jackson@pnnl.gov                   
@@ -13,7 +13,7 @@
 #
 #   Github:     JacksonChem
 #
-#   Updated:    08/28/2023                   
+#   Updated:    09/19/2023                   
 #                                                      
 #------------------------------------------------------------
 
