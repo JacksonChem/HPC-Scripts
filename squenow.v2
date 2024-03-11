@@ -21,7 +21,7 @@ Main(){
 	export SLURM_TIME_FORMAT="%a %b %d %H:%M" # Define time format for End
 	SDATE=$(date -d '1 week ago' +%D-%R) # Search for all jobs within the last week
 	HEADER_ONLY=$(date -d '10 years ago' +%D-%R)
-	FORMAT="%.8i | %25j | %.9P | %.2t | %11M | %.3C%.3D %R" #Default format
+	FORMAT="%.8i | %28j | %.9P | %.2t | %9M | %.3C%.3D %R" #Default format
 	FORMAT_U="%.8i | %.3u | %25j | %.9P | %.2t | %11M | %.3C%.3D %R" #Format for additional users
 	Color='\033[2;30m' #Color for dependency jobs
 	EndColor='\033[0m' #End color code marker
@@ -32,11 +32,11 @@ Main(){
 		USERS=${USERS},$(whoami)
 		echo "  JobID    User           JobName           Partition   Stat   Elapsed        CPUs/Nodes      "
 		echo "---------|-----|---------------------------|-----------|----|-------------|--------------------"
-		output=$(squeue -h --format="${FORMAT_U}" -u ${USERS} | awk -F'|' '{printf "%8s|%4s|%25s|%5s|%3s|%11s|%s\n",$1,$2,$3,$4,$5,$6,$7}' | sort -k 2)
+#		output=$(squeue -h --format="${FORMAT_U}" -u ${USERS} | awk -F'|' '{printf "%8s|%4s|%25s|%5s|%3s|%11s|%s\n",$1,$2,$3,$4,$5,$6,$7}' | sort -k 2)
 	else #Default print format for single user
-		echo "  JobID            JobName             Partition  Stat    Elapsed        CPUs/Nodes      "
-		echo "---------|---------------------------|-----------|----|-------------|--------------------"
-		output=$(squeue -h --format="${FORMAT}" -u $(whoami) | awk -F'|' '{printf "%8s|%25s|%5s|%3s|%11s|%s\n",$1,$2,$3,$4,$5,$6}' | sort -k 2)
+		echo "  JobID            JobName                Partition  Stat  Elapsed        CPUs/Nodes      "
+		echo "---------|------------------------------|-----------|----|-----------|--------------------"
+		output=$(squeue -h --format="${FORMAT}" -u $(whoami) | awk -F'|' '{printf "%8s|%28s|%5s|%3s|%9s|%s\n",$1,$2,$3,$4,$5,$6}' | sort -k 2)
 	fi
 
 	readarray -t QUEUE_LIST < <(echo "${output}")
@@ -44,8 +44,10 @@ Main(){
 	if [[ ${REPEAT} ]]; then #Persistently loop over the queue
 		while true; do
 				Queue_Print;
-				sleep 5
 				echo "---------------------------------------------------------------------------------------"
+				output=$(squeue -h --format="${FORMAT}" -u $(whoami) | awk -F'|' '{printf "%8s|%25s|%5s|%3s|%11s|%s\n",$1,$2,$3,$4,$5,$6}' | sort -k 2)
+				sleep 5
+				readarray -t QUEUE_LIST < <(echo "${output}")
 			done
 	else #Print once
 		Queue_Print;
@@ -53,7 +55,7 @@ Main(){
 }
 
 Option_Handler(){
-  while getopts ":hs:du:" option; do
+  while getopts ":hs:du:i" option; do
     case $option in
       h) Helpfn; exit;;  #
       s) SEARCH_STRING=$OPTARG DO_SEARCH=true;;  #Enable the search functionality to display only matching jobs
